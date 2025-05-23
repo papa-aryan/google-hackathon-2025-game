@@ -6,6 +6,7 @@ from apiTest import get_google_joke # Assuming this is still needed
 from player import Player # Import Player from player.py
 from camera import Camera # Import Camera from camera.py
 import tilemap # Import the new tilemap module
+from wizard import Wizard # Import the Wizard class
 
 
 try:
@@ -64,9 +65,15 @@ player = Player(0, 0) # Create player at a temporary position
 # Center the player on the map using its actual rect center
 player.rect.center = (map_width // 2, map_height // 2)
 
+# Create Wizard instance near the top-left of the map
+wizard_x = 438
+wizard_y = 400
+wizard = Wizard(wizard_x, wizard_y)
+
 # Sprite group
 all_sprites = pygame.sprite.Group()
 all_sprites.add(player)
+all_sprites.add(wizard) # Add wizard to the sprite group
 
 
 # Camera properties
@@ -110,6 +117,8 @@ while running:
     # Update camera position to keep player centered
     game_camera.update(player, map_width, map_height)
 
+    # Update all sprites (including the wizard's own update logic)
+    all_sprites.update() # This will call wizard.update()
 
     # Fill the screen with white
     screen.fill((173, 216, 230))

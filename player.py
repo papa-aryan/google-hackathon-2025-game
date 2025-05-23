@@ -4,13 +4,13 @@ from entity import Entity
 
 class Player(Entity):
     def __init__(self, x, y):
-        super().__init__(x, y, "images/rested.png") # Initial image
+        super().__init__(x, y, "images/player/rested.png") # Initial image
         # Load all animation images
         self.image_rested = pygame.transform.scale(self.image, (128, 128))
-        self.image_up = pygame.transform.scale(pygame.image.load("images/walkingUp.png").convert_alpha(), (128, 128))
-        self.image_down = pygame.transform.scale(pygame.image.load("images/walkingDown.png").convert_alpha(), (128, 128))
-        self.image_right = pygame.transform.scale(pygame.image.load("images/walkingLeftRight.png").convert_alpha(), (128, 128))
-        self.image_left = pygame.transform.flip(pygame.transform.scale(pygame.image.load("images/walkingLeftRight.png").convert_alpha(), (128,128)), True, False)
+        self.image_up = pygame.transform.scale(pygame.image.load("images/player/walkingUp.png").convert_alpha(), (128, 128))
+        self.image_down = pygame.transform.scale(pygame.image.load("images/player/walkingDown.png").convert_alpha(), (128, 128))
+        self.image_right = pygame.transform.scale(pygame.image.load("images/player/walkingLeftRight.png").convert_alpha(), (128, 128))
+        self.image_left = pygame.transform.flip(pygame.transform.scale(pygame.image.load("images/player/walkingLeftRight.png").convert_alpha(), (128,128)), True, False)
         self.image = self.image_rested # Set initial image after scaling
         self.rect = self.image.get_rect(topleft=(x,y)) # Update rect with scaled image
         self.speed = 5
