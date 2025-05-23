@@ -1,7 +1,10 @@
 import pygame
 import ctypes
-import sys # Import sys module
-from apiTest import get_google_joke
+import sys
+from apiTest import get_google_joke # Assuming this is still needed
+from player import Player # Import Player from player.py
+from camera import Camera # Import Camera from camera.py
+import tilemap # Import the new tilemap module
 
 
 try:
@@ -21,13 +24,17 @@ pygame.init()
 pygame.font.init()
 
 # Set screen dimensions
-screen_width = 1600
+screen_width = 1700
 screen_height = 900
 screen = pygame.display.set_mode((screen_width, screen_height))
 
+# Initialize the tilemap system
+tilemap.init_tilemap('cloud_tileA5_2.png')
+
 # Define map dimensions (larger than the screen)
-map_width = 3000
-map_height = 2000
+# Use tilemap dimensions
+map_width = len(tilemap.MAP[0]) * tilemap.TILE_GAME_SIZE
+map_height = len(tilemap.MAP) * tilemap.TILE_GAME_SIZE
 
 # Set window title
 pygame.display.set_caption('Pygame Window')
@@ -35,41 +42,18 @@ pygame.display.set_caption('Pygame Window')
 # Clock for controlling framerate
 clock = pygame.time.Clock()
 
-# Player Sprite Class
-class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y, width, height, color):
-        super().__init__()
-        self.image = pygame.Surface([width, height])
-        self.image.fill(color)
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-        self.speed = 5 # Increase speed for better visibility of camera movement
-
-    def update_position(self, keys, map_width, map_height):
-        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-            self.rect.x -= self.speed
-        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-            self.rect.x += self.speed
-        if keys[pygame.K_UP] or keys[pygame.K_w]:
-            self.rect.y -= self.speed
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            self.rect.y += self.speed
-
-        # Keep player within map boundaries
-        self.rect.x = max(0, min(self.rect.x, map_width - self.rect.width))
-        self.rect.y = max(0, min(self.rect.y, map_height - self.rect.height))
-
 # Character properties
-char_color = (255, 0, 0)  # Red
-char_width = 50
-char_height = 100
+# char_color is no longer used by Player
+# char_width = 50 # Used for initial centering calculation - No longer needed for this method
+# char_height = 100 # Used for initial centering calculation - No longer needed for this method
 # Initial player position (center of the map)
-initial_player_x = map_width // 2 - char_width // 2
-initial_player_y = map_height // 2 - char_height // 2
+# initial_player_x = map_width // 2 - char_width // 2 # Old method
+# initial_player_y = map_height // 2 - char_height // 2 # Old method
 
 # Create Player instance
-player = Player(initial_player_x, initial_player_y, char_width, char_height, char_color)
+player = Player(0, 0) # Create player at a temporary position
+# Center the player on the map using its actual rect center
+player.rect.center = (map_width // 2, map_height // 2)
 
 # Sprite group
 all_sprites = pygame.sprite.Group()
@@ -77,11 +61,11 @@ all_sprites.add(player)
 
 
 # Camera properties
-camera_x = 0
-camera_y = 0
+game_camera = Camera(screen_width, screen_height) # Create Camera instance
 
 # Game loop
 running = True
+last_direction_keydown_event = None # Added to track the last directional key event
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -91,42 +75,33 @@ while running:
                 running = False
             elif event.key == pygame.K_SPACE:
                 print("Space key pressed!")
+            # Store the last directional key pressed
+            elif event.key in [pygame.K_UP, pygame.K_w, pygame.K_DOWN, pygame.K_s, \
+                               pygame.K_LEFT, pygame.K_a, pygame.K_RIGHT, pygame.K_d]:
+                last_direction_keydown_event = event.key
 
     if not running: # Check if running is false to break loop before processing more
         break
 
     # Handle continuous key presses for movement
     keys = pygame.key.get_pressed()
-    player.update_position(keys, map_width, map_height)
+    player.update_position(keys, map_width, map_height, last_direction_keydown_event, tilemap.can_move)
 
     # Update camera position to keep player centered
-    camera_x = player.rect.x - screen_width // 2 + player.rect.width // 2
-    camera_y = player.rect.y - screen_height // 2 + player.rect.height // 2
+    game_camera.update(player, map_width, map_height)
 
-    # Clamp camera to map boundaries
-    camera_x = max(0, min(camera_x, map_width - screen_width))
-    camera_y = max(0, min(camera_y, map_height - screen_height))
 
     # Fill the screen with white
-    screen.fill((255, 255, 255))
+    screen.fill((173, 216, 230))
 
-    # Draw background pattern (grid)
-    grid_color = (200, 200, 200) # Light grey
-    tile_size = 50
-    # Calculate the visible range of tiles
-    start_col = camera_x // tile_size
-    end_col = (camera_x + screen_width) // tile_size + 1
-    start_row = camera_y // tile_size
-    end_row = (camera_y + screen_height) // tile_size + 1
-
-    for x_offset in range(start_col * tile_size, end_col * tile_size, tile_size):
-        pygame.draw.line(screen, grid_color, (x_offset - camera_x, 0), (x_offset - camera_x, screen_height))
-    for y_offset in range(start_row * tile_size, end_row * tile_size, tile_size):
-        pygame.draw.line(screen, grid_color, (0, y_offset - camera_y), (screen_width, y_offset - camera_y))
+    # Draw the tilemap
+    tilemap.draw_map(screen, game_camera)
 
     # Draw all sprites (adjusting for camera)
     for sprite in all_sprites:
-        screen.blit(sprite.image, (sprite.rect.x - camera_x, sprite.rect.y - camera_y))
+        # screen.blit(sprite.image, (sprite.rect.x - camera_x, sprite.rect.y - camera_y)) <--- REPLACE
+        screen.blit(sprite.image, game_camera.apply(sprite))
+
 
     # Update the display
     pygame.display.flip()
