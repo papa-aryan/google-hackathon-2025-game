@@ -29,7 +29,7 @@ screen_height = 900
 screen = pygame.display.set_mode((screen_width, screen_height))
 
 # Initialize the tilemap system
-tilemap.init_tilemap('cloud_tileA5_2.png')
+tilemap.init_tilemap('cloud_tileset.png')
 
 # Define map dimensions (larger than the screen)
 # Use tilemap dimensions

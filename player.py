@@ -84,26 +84,27 @@ class Player(Entity):
             y_lower_half_top = future_y + player_h // 2
             y_lower_half_bottom = future_y + player_h - 1
 
-            # X-coordinates
-            x_left = future_x
-            x_right = future_x + player_w - 1
-            x_center = future_x + player_w // 2
+            # X-coordinates adjusted for reduced horizontal collision radius
+            horizontal_offset = player_w // 3 # 25% offset from each side
+            x_collision_left = future_x + horizontal_offset
+            x_collision_right = future_x + player_w - 1 - horizontal_offset
+            x_center = future_x + player_w // 2 # Original center
             
             # If any of these points on the lower half collide, stop movement.
-            # Point 1: Bottom-left of the player
-            if not collision_check_func(x_left, y_lower_half_bottom):
+            # Point 1: Bottom-left of the player (adjusted)
+            if not collision_check_func(x_collision_left, y_lower_half_bottom):
                 dx, dy = 0, 0
-            # Point 2: Bottom-right of the player
-            elif not collision_check_func(x_right, y_lower_half_bottom):
+            # Point 2: Bottom-right of the player (adjusted)
+            elif not collision_check_func(x_collision_right, y_lower_half_bottom):
                 dx, dy = 0, 0
             # Point 3: Center of the bottom edge (important for small obstacles/platforms)
             elif not collision_check_func(x_center, y_lower_half_bottom):
                 dx, dy = 0, 0
-            # Point 4: Top-left of the *lower half* of the player (at player's mid-height)
-            elif not collision_check_func(x_left, y_lower_half_top):
+            # Point 4: Top-left of the *lower half* of the player (adjusted)
+            elif not collision_check_func(x_collision_left, y_lower_half_top):
                 dx, dy = 0, 0
-            # Point 5: Top-right of the *lower half* of the player (at player's mid-height)
-            elif not collision_check_func(x_right, y_lower_half_top):
+            # Point 5: Top-right of the *lower half* of the player (adjusted)
+            elif not collision_check_func(x_collision_right, y_lower_half_top):
                 dx, dy = 0, 0
             # (Optional) Point 6: Center of the top edge of the *lower half*
             # elif not collision_check_func(x_center, y_lower_half_top):
