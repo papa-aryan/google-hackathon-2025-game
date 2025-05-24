@@ -7,6 +7,7 @@ from player import Player # Import Player from player.py
 from camera import Camera # Import Camera from camera.py
 import tilemap # Import the new tilemap module
 from wizard import Wizard # Import the Wizard class
+from interaction_manager import InteractionManager # Import InteractionManager
 
 
 try:
@@ -28,10 +29,10 @@ pygame.font.init()
 # Font for interaction popup
 interaction_font = pygame.font.Font(None, 36) # Added font
 
-# Game state for wizard interaction
+# Game state for wizard interaction (These will be managed by InteractionManager or influenced by it)
 show_interaction_popup = False
 player_can_move = True
-player_has_interacted_this_visit = False
+# player_has_interacted_this_visit = False # This will be handled by InteractionManager per interactable
 
 # Set screen dimensions
 screen_width = 1700
@@ -74,14 +75,30 @@ player = Player(0, 0) # Create player at a temporary position
 player.rect.center = (map_width // 2, map_height // 2)
 
 # Create Wizard instance near the top-left of the map
-wizard_x = 438
+wizard_x = 439
 wizard_y = 388
-wizard = Wizard(wizard_x, wizard_y)
+# Wizard now takes interaction_radius and interaction_offset_y
+wizard = Wizard(wizard_x, wizard_y, interaction_radius=30, interaction_offset_y=28)
+
+# Initialize Interaction Manager
+interaction_manager = InteractionManager()
+interaction_manager.add_interactable(wizard)
+# Add other NPCs to interaction_manager here as they are created
+
+# These definitions are now part of the Wizard's get_interaction_properties
+# interaction_circle_radius = 30
+# interaction_circle_center_x = wizard.rect.centerx
+# interaction_circle_center_y = wizard.rect.bottom + 28
+# static_interaction_circle_center = pygame.math.Vector2(interaction_circle_center_x, interaction_circle_center_y)
+# interaction_circle_color = (135, 206, 250)  # LightSkyBlue
+# interaction_circle_thickness = 3
+
 
 # Sprite group
 all_sprites = pygame.sprite.Group()
 all_sprites.add(player)
 all_sprites.add(wizard) # Add wizard to the sprite group
+# Add other NPCs to all_sprites here
 
 
 # Camera properties
@@ -108,21 +125,24 @@ while running:
                     importlib.reload(tilemap)
                     tilemap.init_tilemap('cloud_tileset.png') # Re-initialize tileset
                     update_map_dimensions() # Recalculate map dimensions
-                    # Recenter player if map dimensions change significantly (optional, could be complex)
-                    # For now, just reload data. Player might be off-center if map size changes.
                     print("Map reloaded successfully!")
                 except Exception as e:
                     print(f"Error reloading map: {e}")
-            elif event.key == pygame.K_e and show_interaction_popup:
-                print("E pressed - future interaction")
-                show_interaction_popup = False
-                player_can_move = True
-                player_has_interacted_this_visit = True # Mark that interaction occurred
-            elif event.key == pygame.K_q and show_interaction_popup:
-                print("Q pressed - moving on")
-                show_interaction_popup = False
-                player_can_move = True
-                player_has_interacted_this_visit = True # Also mark to prevent re-trigger immediately
+            
+            # Interaction key presses (E and Q)
+            current_interactable = interaction_manager.get_eligible_interactable()
+            if current_interactable and show_interaction_popup:
+                if event.key == pygame.K_e:
+                    print(f"E pressed - interacting with {current_interactable.id}")
+                    interaction_manager.set_interacted_flag(current_interactable.id, True)
+                    show_interaction_popup = False
+                    player_can_move = True
+                    # Potentially trigger specific action for current_interactable
+                elif event.key == pygame.K_q:
+                    print(f"Q pressed - moving on from {current_interactable.id}")
+                    interaction_manager.set_interacted_flag(current_interactable.id, True) # Mark as interacted to hide circle
+                    show_interaction_popup = False
+                    player_can_move = True
 
 
     if not running: # Check if running is false to break loop before processing more
@@ -133,24 +153,21 @@ while running:
     if player_can_move:
         player.update_position(keys, map_width, map_height, last_direction_keydown_event, tilemap.can_move)
 
-    # Wizard interaction logic
-    distance_to_wizard = pygame.math.Vector2(player.rect.center).distance_to(wizard.rect.center)
-    interaction_radius = 128 # Increased radius for interaction
-
-    if distance_to_wizard < interaction_radius and not player_has_interacted_this_visit:
+    # Update Interaction Manager
+    interaction_manager.update(player.rect.center)
+    
+    # Determine if popup should be shown based on InteractionManager
+    eligible_interactable = interaction_manager.get_eligible_interactable()
+    if eligible_interactable:
         if not show_interaction_popup: # Only trigger if popup isn't already shown
             show_interaction_popup = True
             player_can_move = False
-            print("Player entered wizard's radius. Popup shown.")
-    elif distance_to_wizard >= interaction_radius and show_interaction_popup:
-        # This case might be redundant if E/Q always closes it, but good for robustness
-        # Or if player moves away WHILE popup is shown (e.g. if movement wasn't frozen)
+            print(f"Player entered {eligible_interactable.id}\'s interaction circle. Popup shown.")
+    elif show_interaction_popup: # No eligible interactable, but popup is shown (player moved away or interacted)
         show_interaction_popup = False
         player_can_move = True
-        print("Player moved away from wizard. Popup hidden.")
-    elif distance_to_wizard >= (interaction_radius+2) and player_has_interacted_this_visit:
-        player_has_interacted_this_visit = False # Reset when player moves away after an interaction
-        print("Player left interaction zone, can interact again.")
+        # print("Popup hidden because no eligible interactable or player moved away.")
+
 
     # Update camera position to keep player centered
     game_camera.update(player, map_width, map_height)
@@ -166,12 +183,24 @@ while running:
 
     # Draw all sprites (adjusting for camera)
     for sprite in all_sprites:
-        # screen.blit(sprite.image, (sprite.rect.x - camera_x, sprite.rect.y - camera_y)) <--- REPLACE
         screen.blit(sprite.image, game_camera.apply(sprite))
 
+    # Draw interaction circles for all interactables that haven't been interacted with
+    for interactable_obj in interaction_manager.get_all_interactables():
+        if not interaction_manager.get_interacted_flag(interactable_obj.id):
+            props = interactable_obj.get_interaction_properties()
+            circle_center_vec = pygame.math.Vector2(props['center'])
+            # Apply camera offset to the circle's static world position for drawing
+            circle_draw_center_x_on_screen = circle_center_vec.x + game_camera.camera.x
+            circle_draw_center_y_on_screen = circle_center_vec.y + game_camera.camera.y
+            pygame.draw.circle(screen, props['color'],
+                               (int(circle_draw_center_x_on_screen), int(circle_draw_center_y_on_screen)),
+                               props['radius'], props['thickness'])
+
     # Draw interaction popup if active
-    if show_interaction_popup:
-        popup_text = "Press E to Talk to The Wizard. Press Q to Move On"
+    if show_interaction_popup and eligible_interactable:
+        props = eligible_interactable.get_interaction_properties()
+        popup_text = props['message']
         text_surface = interaction_font.render(popup_text, True, (0, 0, 0)) # Black text
         text_rect = text_surface.get_rect(center=(screen_width // 2, screen_height - 50)) # Position at bottom-center
         
