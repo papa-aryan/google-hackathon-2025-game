@@ -25,6 +25,14 @@ except AttributeError:
 pygame.init()
 pygame.font.init()
 
+# Font for interaction popup
+interaction_font = pygame.font.Font(None, 36) # Added font
+
+# Game state for wizard interaction
+show_interaction_popup = False
+player_can_move = True
+player_has_interacted_this_visit = False
+
 # Set screen dimensions
 screen_width = 1700
 screen_height = 900
@@ -67,7 +75,7 @@ player.rect.center = (map_width // 2, map_height // 2)
 
 # Create Wizard instance near the top-left of the map
 wizard_x = 438
-wizard_y = 400
+wizard_y = 388
 wizard = Wizard(wizard_x, wizard_y)
 
 # Sprite group
@@ -105,6 +113,16 @@ while running:
                     print("Map reloaded successfully!")
                 except Exception as e:
                     print(f"Error reloading map: {e}")
+            elif event.key == pygame.K_e and show_interaction_popup:
+                print("E pressed - future interaction")
+                show_interaction_popup = False
+                player_can_move = True
+                player_has_interacted_this_visit = True # Mark that interaction occurred
+            elif event.key == pygame.K_q and show_interaction_popup:
+                print("Q pressed - moving on")
+                show_interaction_popup = False
+                player_can_move = True
+                player_has_interacted_this_visit = True # Also mark to prevent re-trigger immediately
 
 
     if not running: # Check if running is false to break loop before processing more
@@ -112,7 +130,27 @@ while running:
 
     # Handle continuous key presses for movement
     keys = pygame.key.get_pressed()
-    player.update_position(keys, map_width, map_height, last_direction_keydown_event, tilemap.can_move)
+    if player_can_move:
+        player.update_position(keys, map_width, map_height, last_direction_keydown_event, tilemap.can_move)
+
+    # Wizard interaction logic
+    distance_to_wizard = pygame.math.Vector2(player.rect.center).distance_to(wizard.rect.center)
+    interaction_radius = 128 # Increased radius for interaction
+
+    if distance_to_wizard < interaction_radius and not player_has_interacted_this_visit:
+        if not show_interaction_popup: # Only trigger if popup isn't already shown
+            show_interaction_popup = True
+            player_can_move = False
+            print("Player entered wizard's radius. Popup shown.")
+    elif distance_to_wizard >= interaction_radius and show_interaction_popup:
+        # This case might be redundant if E/Q always closes it, but good for robustness
+        # Or if player moves away WHILE popup is shown (e.g. if movement wasn't frozen)
+        show_interaction_popup = False
+        player_can_move = True
+        print("Player moved away from wizard. Popup hidden.")
+    elif distance_to_wizard >= (interaction_radius+2) and player_has_interacted_this_visit:
+        player_has_interacted_this_visit = False # Reset when player moves away after an interaction
+        print("Player left interaction zone, can interact again.")
 
     # Update camera position to keep player centered
     game_camera.update(player, map_width, map_height)
@@ -131,6 +169,18 @@ while running:
         # screen.blit(sprite.image, (sprite.rect.x - camera_x, sprite.rect.y - camera_y)) <--- REPLACE
         screen.blit(sprite.image, game_camera.apply(sprite))
 
+    # Draw interaction popup if active
+    if show_interaction_popup:
+        popup_text = "Press E to Talk to The Wizard. Press Q to Move On"
+        text_surface = interaction_font.render(popup_text, True, (0, 0, 0)) # Black text
+        text_rect = text_surface.get_rect(center=(screen_width // 2, screen_height - 50)) # Position at bottom-center
+        
+        # Optional: Add a background to the popup text for better visibility
+        popup_bg_rect = text_rect.inflate(20, 10) # Add some padding
+        pygame.draw.rect(screen, (200, 200, 200), popup_bg_rect) # Light grey background
+        pygame.draw.rect(screen, (0, 0, 0), popup_bg_rect, 2) # Black border
+
+        screen.blit(text_surface, text_rect)
 
     # Update the display
     pygame.display.flip()
