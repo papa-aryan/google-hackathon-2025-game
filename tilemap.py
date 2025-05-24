@@ -1,4 +1,4 @@
-import pygame
+import pygame # Ensure pygame is imported
 
 # Constants
 TILE_ORIG_SIZE = 16
@@ -10,6 +10,7 @@ EMPTY_TILE_ID = -1
 
 # Load tileset image
 tileset_img = None # Will be loaded by the main game
+tile_rects = {} # Initialize tile_rects globally
 
 # Define the map using tile IDs
 # Original MAP was 12 rows, 20 columns.
@@ -93,129 +94,118 @@ for r_idx in range(_new_map_height_tiles):
 # Collision map (0 = walkable, 1 = wall)
 # Original COLLISION was 12 rows, 20 columns.
 # New COLLISION will be 20 rows, 30 columns.
-_original_collision_rows = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  
-    [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+COLLISION_MAP = [] 
+# Define a list of tile IDs that are considered walkable for the base map layer
+# Expanded based on visual inspection of _original_map_rows and common ground tiles.
+walkable_base_tile_ids = [
+    11, 32, 40, 41, 42, 46, 47, 48, 49, 50, 91, 92, 93, 94, 95, 
+    101, 136, 137, 138, 181, 182, 183, 191, 192, 235, 236, 237
 ]
-_fill_collision_value = 0 # 0 for walkable
 
-COLLISION = []
 for r_idx in range(_new_map_height_tiles):
-    new_collision_row = []
-    if r_idx < len(_original_collision_rows):
-        original_collision_row = _original_collision_rows[r_idx]
-        new_collision_row.extend(original_collision_row)
-        if len(original_collision_row) < _new_map_width_tiles:
-            new_collision_row.extend([_fill_collision_value] * (_new_map_width_tiles - len(original_collision_row)))
-    else:
-        new_collision_row.extend([_fill_collision_value] * _new_map_width_tiles)
-    COLLISION.append(new_collision_row)
+    row = []
+    for c_idx in range(_new_map_width_tiles):
+        collidable = 0  # Default to walkable
+        # Check for borders
+        if r_idx == 0 or r_idx == _new_map_height_tiles - 1 or \
+           c_idx == 0 or c_idx == _new_map_width_tiles - 1:
+            collidable = 1
+        # Check for buildings (these take precedence over walkable base tiles)
+        elif BUILDING_MAP[r_idx][c_idx] != EMPTY_TILE_ID:
+            collidable = 1
+        # Check if the base map tile itself is non-walkable
+        elif MAP[r_idx][c_idx] not in walkable_base_tile_ids:
+            collidable = 1
+        row.append(collidable)
+    COLLISION_MAP.append(row)
 
 
-def init_tilemap(tileset_image_path):
-    global tileset_img
-    tileset_img = pygame.image.load(tileset_image_path).convert_alpha()
+# Function to get tile rectangle from tileset
+tile_rects = {}
 
-def get_tile(row, col):
-    # Ensure tileset_img is loaded
-    if tileset_img is None:
-        # This case should ideally not be reached if init_tilemap is always called first.
-        dummy_tile = pygame.Surface((TILE_ORIG_SIZE, TILE_ORIG_SIZE), pygame.SRCALPHA)
-        dummy_tile.fill((0,0,0,0)) # Transparent
-        return pygame.transform.scale(dummy_tile, (TILE_GAME_SIZE, TILE_GAME_SIZE))
-
-    # Calculate the maximum valid 0-indexed column and row based on the actual image dimensions
-    actual_max_col = (tileset_img.get_width() // TILE_ORIG_SIZE) - 1
-    actual_max_row = (tileset_img.get_height() // TILE_ORIG_SIZE) - 1
-
-    target_col = col
-    target_row = row
-
-    # Check if the conceptual (row, col) is outside the actual image's tile grid
-    if not (0 <= target_row <= actual_max_row and 0 <= target_col <= actual_max_col):
-        # Fallback to tile (0,0) if the requested tile is out of bounds.
-        # First, check if tile (0,0) itself is valid for the loaded tileset.
-        if not (0 <= 0 <= actual_max_row and 0 <= 0 <= actual_max_col):
-            # Tileset image is too small even for a single tile (0,0).
-            # This indicates a fundamental issue with tileset_img or TILE_ORIG_SIZE.
-            # Return a transparent dummy tile.
-            dummy_tile = pygame.Surface((TILE_ORIG_SIZE, TILE_ORIG_SIZE), pygame.SRCALPHA)
-            dummy_tile.fill((0,0,0,0)) # Transparent
-            return pygame.transform.scale(dummy_tile, (TILE_GAME_SIZE, TILE_GAME_SIZE))
-        
-        # Use (0,0) as the fallback tile coordinates
-        target_row = 0
-        target_col = 0
-    
-    # Now, target_row and target_col are within the actual tile grid of the image.
-    rect = pygame.Rect(target_col * TILE_ORIG_SIZE, target_row * TILE_ORIG_SIZE, TILE_ORIG_SIZE, TILE_ORIG_SIZE)
-    
+def init_tilemap(tileset_path_from_main):
+    global tileset_img, tile_rects
+    tile_rects = {} # Ensure it's cleared/initialized at the start
     try:
-        tile = tileset_img.subsurface(rect)
-        tile = pygame.transform.scale(tile, (TILE_GAME_SIZE, TILE_GAME_SIZE))
-        return tile
-    except ValueError:
-        # This might happen if TILE_ORIG_SIZE is incorrect or other unexpected issues.
-        # Return a visible error tile (e.g., semi-transparent red)
-        error_tile = pygame.Surface((TILE_ORIG_SIZE, TILE_ORIG_SIZE), pygame.SRCALPHA)
-        error_tile.fill((255, 0, 0, 128)) # Semi-transparent red
-        return pygame.transform.scale(error_tile, (TILE_GAME_SIZE, TILE_GAME_SIZE))
+        print(f"Attempting to load tileset: {tileset_path_from_main}")
+        loaded_img = pygame.image.load(tileset_path_from_main)
+        tileset_img = loaded_img.convert_alpha()
+        print(f"Tileset '{tileset_path_from_main}' loaded successfully. Size: {tileset_img.get_size()}")
 
-def get_tile_by_id(tile_id):
-    row = tile_id // TILESET_WIDTH
-    col = tile_id % TILESET_WIDTH
-    return get_tile(row, col)
+        tileset_actual_height_pixels = tileset_img.get_height()
+        num_tile_rows_in_tileset = tileset_actual_height_pixels // TILE_ORIG_SIZE
+        total_tiles_in_tileset = TILESET_WIDTH * num_tile_rows_in_tileset
 
-def draw_map(surface, camera):
-    # Draw the base map layer
-    for row_index, row_data in enumerate(MAP):
-        for col_index, tile_id in enumerate(row_data):
-            tile_surface = get_tile_by_id(tile_id)
-            # Calculate the position of the tile
-            tile_x = col_index * TILE_GAME_SIZE
-            tile_y = row_index * TILE_GAME_SIZE
-            # Apply camera offset
-            surface.blit(tile_surface, (tile_x + camera.camera.x, tile_y + camera.camera.y))
+        for i in range(total_tiles_in_tileset):
+            row, col = divmod(i, TILESET_WIDTH)
+            rect = pygame.Rect(col * TILE_ORIG_SIZE, row * TILE_ORIG_SIZE, TILE_ORIG_SIZE, TILE_ORIG_SIZE)
+            tile_rects[i] = rect
+        print(f"Initialized {len(tile_rects)} tile rects.")
 
-    # Draw the building layer on top
-    for row_index, row_data in enumerate(BUILDING_MAP):
-        for col_index, tile_id in enumerate(row_data):
-            if tile_id != EMPTY_TILE_ID: # Only draw if it's not an empty tile
-                tile_surface = get_tile_by_id(tile_id)
-                # Calculate the position of the tile
-                tile_x = col_index * TILE_GAME_SIZE
-                tile_y = row_index * TILE_GAME_SIZE
-                # Apply camera offset
-                surface.blit(tile_surface, (tile_x + camera.camera.x, tile_y + camera.camera.y))
+    except pygame.error as e:
+        print(f"CRITICAL PYGAME ERROR loading tileset '{tileset_path_from_main}': {e}")
+        tileset_img = None # Ensure it's None on failure
+    except Exception as e:
+        print(f"CRITICAL UNEXPECTED ERROR during init_tilemap: {e}")
+        tileset_img = None # Ensure it's None on failure
 
-def can_move(x, y):
-    # Convert pixel position to tile position
-    tile_x = x // TILE_GAME_SIZE
-    tile_y = y // TILE_GAME_SIZE
+
+def get_tile_rect(tile_id):
+    return tile_rects.get(tile_id)
+
+# Renamed and modified to accept tile_size and ensure tileset_img is loaded
+def _draw_layer_internal(surface, layer_data, camera, current_tile_size):
+    global tileset_img # Ensure access to the loaded tileset
+    if tileset_img is None: # Explicitly check for None
+        # Error message will be printed by init_tilemap if loading failed
+        return
+
+    for row_idx, row in enumerate(layer_data):
+        for col_idx, tile_id in enumerate(row):
+            if tile_id != EMPTY_TILE_ID: 
+                tile_img_rect = get_tile_rect(tile_id)
+                if tile_img_rect:
+                    screen_x = col_idx * current_tile_size + camera.camera.x
+                    screen_y = row_idx * current_tile_size + camera.camera.y
+                    
+                    if screen_x + current_tile_size > 0 and screen_x < surface.get_width() and \
+                       screen_y + current_tile_size > 0 and screen_y < surface.get_height():
+                        scaled_tile = pygame.transform.scale(
+                            tileset_img.subsurface(tile_img_rect), 
+                            (current_tile_size, current_tile_size)
+                        )
+                        surface.blit(scaled_tile, (screen_x, screen_y))
+
+# Modified to accept map layouts and tile_size as parameters
+def draw_map(surface, camera, map_layout, building_layout, tile_size):
+    if map_layout:
+        _draw_layer_internal(surface, map_layout, camera, tile_size)
     
-    # Check bounds of the map (using COLLISION map dimensions as reference)
-    if not (0 <= tile_y < len(COLLISION) and 0 <= tile_x < len(COLLISION[0])):
-        return False # Out of bounds is not walkable
+    if building_layout:
+        _draw_layer_internal(surface, building_layout, camera, tile_size)
 
-    # Check collision with the base layer's explicit collision map
-    if COLLISION[tile_y][tile_x] != 0: # Not walkable if base collision map says so (1 = wall)
-        return False
-        
-    # Check collision with the building layer
-    # Assumes BUILDING_MAP has the same dimensions as COLLISION map
-    if 0 <= tile_y < len(BUILDING_MAP) and 0 <= tile_x < len(BUILDING_MAP[0]):
-        if BUILDING_MAP[tile_y][tile_x] != EMPTY_TILE_ID:
-            return False # Not walkable if there's a building tile (any tile ID other than EMPTY_TILE_ID)
-            
-    return True # Walkable if no collision on base explicit collision or building layer
+
+def can_move(world_x, world_y):
+    # This function is effectively replaced by MapManager.can_move
+    # However, it might be called if old references exist.
+    # For safety, it could delegate or raise an error if called.
+    # print("Warning: tilemap.can_move called. This should be handled by MapManager.")
+    # For now, let it pass as it's not directly used by player movement in main.py
+    pass
+    
+
+def get_main_map_data():
+    # This function provides the data structure for the main map
+    # Start player at tile (1,1) which should be grass and walkable.
+    # MAP[1][1] is 46 (grass), BUILDING_MAP[1][1] is -1 (empty).
+    # walkable_base_tile_ids includes 46. COLLISION_MAP[1][1] should be 0.
+    start_x_tile, start_y_tile = 1, 1
+    return {
+        "name": "main_map",
+        "map_layout": MAP,
+        "building_layout": BUILDING_MAP,
+        "collision_layout": COLLISION_MAP, # Ensure this is the updated COLLISION_MAP
+        "tile_size": TILE_GAME_SIZE,
+        "tileset_path": 'cloud_tileset.png',  # Crucial for loading the correct tileset
+        "entry_point_tile": (start_x_tile, start_y_tile) # Added entry point
+    }

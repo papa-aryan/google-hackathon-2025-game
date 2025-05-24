@@ -17,6 +17,15 @@ class InteractionManager:
         self.interactables.append(interactable_obj)
         self.interacted_flags[interactable_obj.id] = False # Initialize as not interacted
 
+    def remove_interactable(self, interactable_id):
+        """Removes an interactable object from the manager by its ID."""
+        self.interactables = [obj for obj in self.interactables if obj.id != interactable_id]
+        if interactable_id in self.interacted_flags:
+            del self.interacted_flags[interactable_id]
+        if self.current_eligible_interactable and self.current_eligible_interactable.id == interactable_id:
+            self.current_eligible_interactable = None
+            print(f"Removed active interactable: {interactable_id}")
+
     def update(self, player_rect_center):
         """
         Updates the state of interactions based on player position.

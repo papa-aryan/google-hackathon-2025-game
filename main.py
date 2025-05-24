@@ -8,6 +8,8 @@ from camera import Camera # Import Camera from camera.py
 import tilemap # Import the new tilemap module
 from wizard import Wizard # Import the Wizard class
 from interaction_manager import InteractionManager # Import InteractionManager
+from mapManager import MapManager # Import MapManager
+import wizardHouse # Ensure wizardHouse is imported to be available for MapManager
 
 
 try:
@@ -39,21 +41,32 @@ screen_width = 1700
 screen_height = 900
 screen = pygame.display.set_mode((screen_width, screen_height))
 
-# Initialize the tilemap system
-tilemap.init_tilemap('cloud_tileset.png')
-
 # Define map dimensions (larger than the screen)
 # Use tilemap dimensions
 # Make map_width and map_height global so they can be updated
 map_width = 0
 map_height = 0
 
-def update_map_dimensions():
-    global map_width, map_height
-    map_width = len(tilemap.MAP[0]) * tilemap.TILE_GAME_SIZE
-    map_height = len(tilemap.MAP) * tilemap.TILE_GAME_SIZE
+# Instantiate MapManager FIRST, as other modules might need it during their setup if they call get_current_map_data
+map_manager = MapManager()
 
-update_map_dimensions() # Initial calculation
+# Now initialize tilemap, which might use map_manager if refactored to do so,
+# or main.py will pass map_manager.get_current_tile_size() etc.
+tilemap.init_tilemap(map_manager.current_map_data["tileset_path"]) # Initialize with current (main) map's tileset
+
+
+def update_map_dimensions_from_manager(new_width, new_height):
+    global map_width, map_height
+    map_width = new_width
+    map_height = new_height
+    print(f"Global map dimensions updated by MapManager: {map_width}x{map_height}")
+
+
+# Initial map dimensions are set by MapManager based on the starting map ("main_map")
+map_width = len(map_manager.get_current_map_layout()[0]) * map_manager.get_current_tile_size()
+map_height = len(map_manager.get_current_map_layout()) * map_manager.get_current_tile_size()
+print(f"Initial map dimensions: {map_width}x{map_height}")
+
 
 # Set window title
 pygame.display.set_caption('Pygame Window')
@@ -71,13 +84,12 @@ clock = pygame.time.Clock()
 
 # Create Player instance
 player = Player(0, 0) # Create player at a temporary position
-# Center the player on the map using its actual rect center
+# Center the player on the initial map
 player.rect.center = (map_width // 2, map_height // 2)
 
 # Create Wizard instance near the top-left of the map
-wizard_x = 439
+wizard_x = 439 
 wizard_y = 388
-# Wizard now takes interaction_radius and interaction_offset_y
 wizard = Wizard(wizard_x, wizard_y, interaction_radius=30, interaction_offset_y=28)
 
 # Initialize Interaction Manager
@@ -110,48 +122,49 @@ last_direction_keydown_event = None # Added to track the last directional key ev
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
+            running = False # Correctly set running to False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
+            if event.key == pygame.K_ESCAPE: # Optional: Add an escape key to quit
                 running = False
-            elif event.key == pygame.K_SPACE:
-                print("Space key pressed!")
-            # Store the last directional key pressed
-            elif event.key in [pygame.K_UP, pygame.K_w, pygame.K_DOWN, pygame.K_s, \
-                               pygame.K_LEFT, pygame.K_a, pygame.K_RIGHT, pygame.K_d]:
-                last_direction_keydown_event = event.key
-            elif event.key == pygame.K_u: # Added for map refresh
-                try:
-                    importlib.reload(tilemap)
-                    tilemap.init_tilemap('cloud_tileset.png') # Re-initialize tileset
-                    update_map_dimensions() # Recalculate map dimensions
-                    print("Map reloaded successfully!")
-                except Exception as e:
-                    print(f"Error reloading map: {e}")
             
-            # Interaction key presses (E and Q)
-            current_interactable = interaction_manager.get_eligible_interactable()
-            if current_interactable and show_interaction_popup:
-                if event.key == pygame.K_e:
-                    print(f"E pressed - interacting with {current_interactable.id}")
-                    interaction_manager.set_interacted_flag(current_interactable.id, True)
+            last_direction_keydown_event = event.key # Update last direction key
+
+            if show_interaction_popup and eligible_interactable:
+                if event.key == pygame.K_e: # Player presses E to interact
+                    print(f"E pressed. Interacting with: {eligible_interactable.id}")
+                    if eligible_interactable.id == "wizard":
+                        # Player is interacting with the wizard
+                        interaction_manager.set_interacted_flag(wizard.id, True) # Mark as interacted for this visit
+                        show_interaction_popup = False # Hide popup
+                        player_can_move = True # Allow player to move again
+                        
+                        # Switch to wizard's house map
+                        map_manager.switch_map("wizard_house", player)
+                        # Player position is handled by switch_map
+                        # NPCs are handled by switch_map
+                        print("Teleported to Wizard's House.")
+                        # No need to break here, let the loop continue to redraw with new map
+                    
+                    # Add other interactable actions here if needed
+                    # elif eligible_interactable.id == "some_other_npc":
+                    #     pass
+
+                elif event.key == pygame.K_q: # Player presses Q to move on
+                    print("Q pressed. Moving on from interaction.")
+                    if eligible_interactable: # Ensure there's something to move on from
+                         # Mark as interacted to prevent immediate re-trigger if player stays in circle
+                        interaction_manager.set_interacted_flag(eligible_interactable.id, True)
                     show_interaction_popup = False
                     player_can_move = True
-                    # Potentially trigger specific action for current_interactable
-                elif event.key == pygame.K_q:
-                    print(f"Q pressed - moving on from {current_interactable.id}")
-                    interaction_manager.set_interacted_flag(current_interactable.id, True) # Mark as interacted to hide circle
-                    show_interaction_popup = False
-                    player_can_move = True
-
-
+    
     if not running: # Check if running is false to break loop before processing more
         break
 
     # Handle continuous key presses for movement
     keys = pygame.key.get_pressed()
     if player_can_move:
-        player.update_position(keys, map_width, map_height, last_direction_keydown_event, tilemap.can_move)
+        # Pass the MapManager's can_move method for collision detection
+        player.update_position(keys, map_width, map_height, last_direction_keydown_event, map_manager.can_move)
 
     # Update Interaction Manager
     interaction_manager.update(player.rect.center)
@@ -159,33 +172,41 @@ while running:
     # Determine if popup should be shown based on InteractionManager
     eligible_interactable = interaction_manager.get_eligible_interactable()
     if eligible_interactable:
-        if not show_interaction_popup: # Only trigger if popup isn't already shown
+        if not show_interaction_popup: # Only set to true if it wasn't already
             show_interaction_popup = True
-            player_can_move = False
+            player_can_move = False # Stop player movement when popup appears
             print(f"Player entered {eligible_interactable.id}\'s interaction circle. Popup shown.")
-    elif show_interaction_popup: # No eligible interactable, but popup is shown (player moved away or interacted)
+    elif show_interaction_popup: # No eligible interactable, but popup is shown
         show_interaction_popup = False
         player_can_move = True
         # print("Popup hidden because no eligible interactable or player moved away.")
 
 
     # Update camera position to keep player centered
-    game_camera.update(player, map_width, map_height)
+    game_camera.update(player, map_width, map_height) # map_width and map_height are now dynamic
 
     # Update all sprites (including the wizard's own update logic)
-    all_sprites.update() # This will call wizard.update()
+    # Sprites list is managed by map_manager for map-specific NPCs
+    all_sprites.update() 
 
     # Fill the screen with white
     screen.fill((173, 216, 230))
 
-    # Draw the tilemap
-    tilemap.draw_map(screen, game_camera)
+    # Draw the tilemap using the MapManager's current map data
+    # tilemap.draw_map(screen, game_camera) # OLD WAY
+    # NEW WAY: Pass necessary data from map_manager to tilemap.draw_map
+    current_map_layout = map_manager.get_current_map_layout()
+    current_building_layout = map_manager.get_current_building_layout()
+    current_tile_size = map_manager.get_current_tile_size()
+    tilemap.draw_map(screen, game_camera, current_map_layout, current_building_layout, current_tile_size)
 
     # Draw all sprites (adjusting for camera)
+    # Ensure all_sprites only contains sprites relevant to the current map
     for sprite in all_sprites:
         screen.blit(sprite.image, game_camera.apply(sprite))
 
     # Draw interaction circles for all interactables that haven't been interacted with
+    # and are on the current map (implicitly handled if interaction_manager only has current map's interactables)
     for interactable_obj in interaction_manager.get_all_interactables():
         if not interaction_manager.get_interacted_flag(interactable_obj.id):
             props = interactable_obj.get_interaction_properties()
