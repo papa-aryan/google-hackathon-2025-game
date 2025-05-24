@@ -139,7 +139,14 @@ while running:
                         player_can_move = True # Allow player to move again
                         
                         # Switch to wizard's house map
-                        map_manager.switch_map("wizard_house", player)
+                        map_manager.switch_map(
+                            "wizard_house", 
+                            player, 
+                            wizard,                 # Pass wizard instance
+                            all_sprites,            # Pass all_sprites group
+                            interaction_manager,    # Pass interaction_manager instance
+                            update_map_dimensions_from_manager # Pass callback function
+                        ) # MODIFIED CALL
                         # Player position is handled by switch_map
                         # NPCs are handled by switch_map
                         print("Teleported to Wizard's House.")

@@ -1,6 +1,7 @@
 import pygame
 import tilemap # To get main map data
 import wizardHouse # To get wizard house map data
+#import main
 
 class MapManager:
     def __init__(self):
@@ -11,7 +12,7 @@ class MapManager:
         self.current_map_name = "main_map"
         self.current_map_data = self.maps[self.current_map_name]
 
-    def switch_map(self, map_name, player):
+    def switch_map(self, map_name, player, wizard_sprite, all_sprites_group, interaction_mgr, update_dimensions_func): # MODIFIED SIGNATURE
         if map_name in self.maps:
             self.current_map_name = map_name
             self.current_map_data = self.maps[map_name]
@@ -21,12 +22,7 @@ class MapManager:
             new_map_width_pixels = len(self.current_map_data["map_layout"][0]) * self.current_map_data["tile_size"]
             new_map_height_pixels = len(self.current_map_data["map_layout"]) * self.current_map_data["tile_size"]
             
-            # Access main.py's global map dimensions and update them
-            # This is a bit of a hack; a better way would be to pass a callback or use a global state manager
-            import main
-            main.map_width = new_map_width_pixels
-            main.map_height = new_map_height_pixels
-            main.update_map_dimensions_from_manager(new_map_width_pixels, new_map_height_pixels)
+            update_dimensions_func(new_map_width_pixels, new_map_height_pixels) # MODIFIED CALL
 
 
             # Position player at the entry point of the new map
@@ -40,15 +36,14 @@ class MapManager:
                 player.rect.topleft = (0,0)
             
             # Potentially hide/show NPCs based on the current map
-            # For example, the wizard should only be on the main_map
             if map_name == "wizard_house":
-                if main.wizard in main.all_sprites:
-                    main.all_sprites.remove(main.wizard)
-                    main.interaction_manager.remove_interactable(main.wizard.id) # Assumes such a method exists
+                if wizard_sprite in all_sprites_group: # MODIFIED
+                    all_sprites_group.remove(wizard_sprite) # MODIFIED
+                    interaction_mgr.remove_interactable(wizard_sprite.id) # MODIFIED
             elif map_name == "main_map":
-                if main.wizard not in main.all_sprites:
-                    main.all_sprites.add(main.wizard)
-                    main.interaction_manager.add_interactable(main.wizard)
+                if wizard_sprite not in all_sprites_group: # MODIFIED
+                    all_sprites_group.add(wizard_sprite) # MODIFIED
+                    interaction_mgr.add_interactable(wizard_sprite) # MODIFIED
 
 
         else:
