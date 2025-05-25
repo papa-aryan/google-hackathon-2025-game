@@ -1,7 +1,7 @@
 import pygame
 import tilemap # To get main map data
 import wizardHouse # To get wizard house map data
-#import main
+
 
 class MapManager:
     def __init__(self):
@@ -18,10 +18,19 @@ class MapManager:
             self.current_map_data = self.maps[map_name]
             print(f"Switched to map: {map_name}")
 
+            # CORRECTED KEY and ADDED tileset_width argument
+            tilemap.init_tilemap(
+                self.current_map_data["tileset_path"],
+                self.current_map_data["tileset_width"], # Pass the specific width
+                self.current_map_data["tile_orig_size"] # Pass the specific original tile size
+            )
+
+
             # Update game-wide map dimensions
             new_map_width_pixels = len(self.current_map_data["map_layout"][0]) * self.current_map_data["tile_size"]
             new_map_height_pixels = len(self.current_map_data["map_layout"]) * self.current_map_data["tile_size"]
             
+
             update_dimensions_func(new_map_width_pixels, new_map_height_pixels) # MODIFIED CALL
 
 
@@ -54,6 +63,9 @@ class MapManager:
 
     def get_current_building_layout(self):
         return self.current_map_data.get("building_layout") # Use .get for optional layers
+
+    def get_current_decoration_layout(self):
+        return self.current_map_data.get("decoration_layout") # ADDED: Getter for decoration layer
 
     def get_current_collision_layout(self):
         return self.current_map_data["collision_layout"]

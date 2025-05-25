@@ -3,7 +3,7 @@ import pygame # Ensure pygame is imported
 # Constants
 TILE_ORIG_SIZE = 16
 TILE_GAME_SIZE = 64
-TILESET_WIDTH = 45  # Tileset width in tiles
+MAIN_MAP_TILESET_WIDTH = 45  # Tileset width for cloud_tileset.png
 
 # Special ID for empty tiles in the building layer
 EMPTY_TILE_ID = -1
@@ -123,24 +123,26 @@ for r_idx in range(_new_map_height_tiles):
 # Function to get tile rectangle from tileset
 tile_rects = {}
 
-def init_tilemap(tileset_path_from_main):
+def init_tilemap(tileset_path_from_main, tileset_actual_width_tiles, tileset_tile_original_size): # MODIFIED: Added tileset_tile_original_size
     global tileset_img, tile_rects
-    tile_rects = {} # Ensure it's cleared/initialized at the start
+    tile_rects = {} 
     try:
-        print(f"Attempting to load tileset: {tileset_path_from_main}")
+        print(f"Attempting to load tileset: {tileset_path_from_main} (orig tile size: {tileset_tile_original_size})")
         loaded_img = pygame.image.load(tileset_path_from_main)
         tileset_img = loaded_img.convert_alpha()
         print(f"Tileset '{tileset_path_from_main}' loaded successfully. Size: {tileset_img.get_size()}")
 
         tileset_actual_height_pixels = tileset_img.get_height()
-        num_tile_rows_in_tileset = tileset_actual_height_pixels // TILE_ORIG_SIZE
-        total_tiles_in_tileset = TILESET_WIDTH * num_tile_rows_in_tileset
+        # Use the passed tileset_tile_original_size for row calculation
+        num_tile_rows_in_tileset = tileset_actual_height_pixels // tileset_tile_original_size
+        total_tiles_in_tileset = tileset_actual_width_tiles * num_tile_rows_in_tileset 
 
         for i in range(total_tiles_in_tileset):
-            row, col = divmod(i, TILESET_WIDTH)
-            rect = pygame.Rect(col * TILE_ORIG_SIZE, row * TILE_ORIG_SIZE, TILE_ORIG_SIZE, TILE_ORIG_SIZE)
+            row, col = divmod(i, tileset_actual_width_tiles) 
+            # Use the passed tileset_tile_original_size for Rect creation
+            rect = pygame.Rect(col * tileset_tile_original_size, row * tileset_tile_original_size, tileset_tile_original_size, tileset_tile_original_size)
             tile_rects[i] = rect
-        print(f"Initialized {len(tile_rects)} tile rects.")
+        print(f"Initialized {len(tile_rects)} tile rects using tileset width {tileset_actual_width_tiles} and orig tile size {tileset_tile_original_size}.")
 
     except pygame.error as e:
         print(f"CRITICAL PYGAME ERROR loading tileset '{tileset_path_from_main}': {e}")
@@ -177,12 +179,13 @@ def _draw_layer_internal(surface, layer_data, camera, current_tile_size):
                         surface.blit(scaled_tile, (screen_x, screen_y))
 
 # Modified to accept map layouts and tile_size as parameters
-def draw_map(surface, camera, map_layout, building_layout, tile_size):
+def draw_map(surface, camera, map_layout, building_layout, decoration_layout, tile_size):
     if map_layout:
         _draw_layer_internal(surface, map_layout, camera, tile_size)
-    
-    if building_layout:
+    if building_layout: # Check if building_layout exists
         _draw_layer_internal(surface, building_layout, camera, tile_size)
+    if decoration_layout: # ADDED: Draw decoration layer
+        _draw_layer_internal(surface, decoration_layout, camera, tile_size)
 
 
 def can_move(world_x, world_y):
@@ -196,16 +199,17 @@ def can_move(world_x, world_y):
 
 def get_main_map_data():
     # This function provides the data structure for the main map
-    # Start player at tile (1,1) which should be grass and walkable.
-    # MAP[1][1] is 46 (grass), BUILDING_MAP[1][1] is -1 (empty).
-    # walkable_base_tile_ids includes 46. COLLISION_MAP[1][1] should be 0.
-    start_x_tile, start_y_tile = 1, 1
+    # Player start position for the main map (example: tile 10,10)
+    # Ensure these are within the bounds of MAP and COLLISION_MAP
+    start_x_tile, start_y_tile = 1, 1 # Example starting tile
     return {
-        "name": "main_map",
+        "name": "main_map", # Added name for consistency
         "map_layout": MAP,
-        "building_layout": BUILDING_MAP,
-        "collision_layout": COLLISION_MAP, # Ensure this is the updated COLLISION_MAP
-        "tile_size": TILE_GAME_SIZE,
-        "tileset_path": 'cloud_tileset.png',  # Crucial for loading the correct tileset
-        "entry_point_tile": (start_x_tile, start_y_tile) # Added entry point
+        "building_layout": BUILDING_MAP, # Can be None if no building layer
+        "collision_layout": COLLISION_MAP, # Make sure this is correctly generated
+        "tile_size": TILE_GAME_SIZE, # Game size for rendering
+        "tileset_path": 'cloud_tileset.png', # Path to the main map's tileset
+        "tileset_width": MAIN_MAP_TILESET_WIDTH, # Tileset width for this map
+        "tile_orig_size": TILE_ORIG_SIZE, # ADDED: Original tile size for the main map tileset (global TILE_ORIG_SIZE)
+        "entry_point_tile": (start_x_tile, start_y_tile) # Player's starting tile coordinates
     }

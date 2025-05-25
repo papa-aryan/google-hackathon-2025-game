@@ -52,7 +52,12 @@ map_manager = MapManager()
 
 # Now initialize tilemap, which might use map_manager if refactored to do so,
 # or main.py will pass map_manager.get_current_tile_size() etc.
-tilemap.init_tilemap(map_manager.current_map_data["tileset_path"]) # Initialize with current (main) map's tileset
+# Pass the tileset_width from the current map data
+tilemap.init_tilemap(
+    map_manager.current_map_data["tileset_path"],
+    map_manager.current_map_data["tileset_width"],
+    map_manager.current_map_data["tile_orig_size"] # Pass the specific original tile size for the initial map
+)
 
 
 def update_map_dimensions_from_manager(new_width, new_height):
@@ -204,8 +209,9 @@ while running:
     # NEW WAY: Pass necessary data from map_manager to tilemap.draw_map
     current_map_layout = map_manager.get_current_map_layout()
     current_building_layout = map_manager.get_current_building_layout()
+    current_decoration_layout = map_manager.get_current_decoration_layout() # ADDED
     current_tile_size = map_manager.get_current_tile_size()
-    tilemap.draw_map(screen, game_camera, current_map_layout, current_building_layout, current_tile_size)
+    tilemap.draw_map(screen, game_camera, current_map_layout, current_building_layout, current_decoration_layout, current_tile_size) # MODIFIED
 
     # Draw all sprites (adjusting for camera)
     # Ensure all_sprites only contains sprites relevant to the current map
