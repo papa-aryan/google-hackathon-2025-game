@@ -30,7 +30,7 @@ class Wizard(Entity):
         self.interaction_center_x = self.rect.centerx
         self.interaction_center_y = self.rect.bottom + interaction_offset_y # Offset below the wizard
         self.static_interaction_center = (self.interaction_center_x, self.interaction_center_y)
-        self.interaction_message = "Press E to Talk to The Wizard. Press Q to Move On"
+        self.interaction_message = "Press E to Visit to The Wizard. Press Q to Move On"
 
 
     def get_interaction_properties(self):

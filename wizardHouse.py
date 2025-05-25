@@ -118,7 +118,7 @@ def get_wizard_house_data():
         y_tile_idx=4, # Adjusted to be near the wizard
         tile_size=TILE_GAME_SIZE,
         radius=30,
-        message="Press E to go back to Town. Press Q to stay with the Wizard", # User-specified message
+        message="Press E to Talk to the Wizard. Press Q to go back to Town", # User-specified message
         id="wizard_house_stay_query_circle" # Unique ID for the new circle
     )
 

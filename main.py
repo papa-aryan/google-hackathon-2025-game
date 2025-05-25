@@ -158,7 +158,6 @@ while running:
                         interaction_manager.set_interacted_flag(wizard.id, True) # Mark as interacted for this visit
                         show_interaction_popup = False # Hide popup
                         player_can_move = True # Allow player to move again
-                        
                         map_manager.switch_map(
                             "wizard_house", 
                             player, 
@@ -170,38 +169,53 @@ while running:
                         print("Teleported to Wizard's House.")
                     
                     elif eligible_interactable.id == "wizard_house_stay_query_circle":
+                        # This was previously the "go back to town" action.
+                        # Now, 'E' is for "talk to the Wizard" as per your new message.
+                        # For now, it will just close the popup. You can add specific "talk" logic later.
                         interaction_manager.set_interacted_flag(eligible_interactable.id, True)
                         show_interaction_popup = False
                         player_can_move = True
-                        
-                        map_manager.switch_map(
-                            "main_map",
-                            player,
-                            wizard, # wizard object is the main map wizard
-                            all_sprites,
-                            interaction_manager,
-                            update_map_dimensions_from_manager
-                        )
-                        print("Returning to Main Map from Wizard's House.")
+                        print(f"E pressed for {eligible_interactable.id}. Action: Talk to Wizard (closes popup for now).")
 
-                        # Adjust player position to be below the wizard's circle on the main map
-                        wizard_main_map_props = wizard.get_interaction_properties()
-                        target_x = wizard_main_map_props['center'][0]
-                        # Position player's top edge just below the circle's bottom edge with a small gap
-                        target_y_top = wizard_main_map_props['center'][1] + wizard_main_map_props['radius'] + 5 
+                elif event.key == pygame.K_q: # Player presses Q
+                    print(f"Q pressed with eligible interactable: {eligible_interactable.id if eligible_interactable else 'None'}.")
+                    if eligible_interactable:
+                        if eligible_interactable.id == "wizard_house_stay_query_circle":
+                            # Player presses Q to go back to Town from Wizard's House
+                            interaction_manager.set_interacted_flag(eligible_interactable.id, True)
+                            show_interaction_popup = False
+                            player_can_move = True
+                            
+                            map_manager.switch_map(
+                                "main_map",
+                                player,
+                                wizard, # wizard object is the main map wizard
+                                all_sprites,
+                                interaction_manager,
+                                update_map_dimensions_from_manager
+                            )
+                            print("Returning to Main Map from Wizard's House via Q key.")
 
-                        player.rect.centerx = int(target_x)
-                        player.rect.top = int(target_y_top)
-                        
-                        print(f"Player repositioned to top: {player.rect.top}, centerx: {player.rect.centerx} on main_map.")
+                            # Adjust player position to be below the wizard's circle on the main map
+                            wizard_main_map_props = wizard.get_interaction_properties()
+                            target_x = wizard_main_map_props['center'][0]
+                            # Position player's top edge just below the circle's bottom edge with a small gap
+                            target_y_top = wizard_main_map_props['center'][1] + wizard_main_map_props['radius'] + 5 
 
-                elif event.key == pygame.K_q: # Player presses Q to move on
-                    print(f"Q pressed. Moving on from interaction with {eligible_interactable.id if eligible_interactable else 'None'}.")
-                    if eligible_interactable: # Ensure there's something to move on from
-                         # Mark as interacted to prevent immediate re-trigger if player stays in circle
-                        interaction_manager.set_interacted_flag(eligible_interactable.id, True)
-                    show_interaction_popup = False
-                    player_can_move = True
+                            player.rect.centerx = int(target_x)
+                            player.rect.top = int(target_y_top)
+                            
+                            print(f"Player repositioned to top: {player.rect.top}, centerx: {player.rect.centerx} on main_map.")
+                        else:
+                            # Generic Q action for other interactables (move on)
+                            print(f"Q pressed. Moving on from interaction with {eligible_interactable.id}.")
+                            interaction_manager.set_interacted_flag(eligible_interactable.id, True)
+                            show_interaction_popup = False
+                            player_can_move = True
+                    else:
+                        # Q pressed when no interactable is eligible (should ideally not happen if popup isn't shown)
+                        show_interaction_popup = False
+                        player_can_move = True
     
     if not running: # Check if running is false to break loop before processing more
         break
