@@ -29,7 +29,7 @@ pygame.init()
 pygame.font.init()
 
 # Font for interaction popup
-interaction_font = pygame.font.Font(None, 36) # Added font
+interaction_font = pygame.font.Font(None, 72) # Added font
 
 # Game state for wizard interaction (These will be managed by InteractionManager or influenced by it)
 show_interaction_popup = False
@@ -282,16 +282,37 @@ while running:
     # Draw interaction popup if active
     if show_interaction_popup and eligible_interactable:
         props = eligible_interactable.get_interaction_properties()
-        popup_text = props['message']
-        text_surface = interaction_font.render(popup_text, True, (0, 0, 0)) # Black text
-        text_rect = text_surface.get_rect(center=(screen_width // 2, screen_height - 50)) # Position at bottom-center
+        popup_text_lines = props['message'].split('\n') # Split the message by newline character
         
+        # Calculate total height and max width for the background
+        line_height = interaction_font.get_linesize()
+        total_text_height = len(popup_text_lines) * line_height
+        
+        rendered_lines = []
+        max_line_width = 0
+        for line in popup_text_lines:
+            text_surface = interaction_font.render(line, True, (0, 0, 0)) # Black text
+            rendered_lines.append(text_surface)
+            if text_surface.get_width() > max_line_width:
+                max_line_width = text_surface.get_width()
+
         # Optional: Add a background to the popup text for better visibility
-        popup_bg_rect = text_rect.inflate(20, 10) # Add some padding
+        # Position the background box
+        popup_bg_rect_width = max_line_width + 20 # Add padding
+        popup_bg_rect_height = total_text_height + 10 # Add padding
+        popup_bg_rect_x = (screen_width - popup_bg_rect_width) // 2
+        popup_bg_rect_y = screen_height - popup_bg_rect_height - 40 # Position near bottom, adjust 40 as needed
+        
+        popup_bg_rect = pygame.Rect(popup_bg_rect_x, popup_bg_rect_y, popup_bg_rect_width, popup_bg_rect_height)
         pygame.draw.rect(screen, (200, 200, 200), popup_bg_rect) # Light grey background
         pygame.draw.rect(screen, (0, 0, 0), popup_bg_rect, 2) # Black border
 
-        screen.blit(text_surface, text_rect)
+        # Blit each line
+        current_y = popup_bg_rect.top + 5 # Start y for the first line (inside the padding)
+        for text_surface in rendered_lines:
+            text_rect = text_surface.get_rect(centerx=popup_bg_rect.centerx, top=current_y)
+            screen.blit(text_surface, text_rect)
+            current_y += line_height
 
     # Update the display
     pygame.display.flip()

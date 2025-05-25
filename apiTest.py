@@ -1,40 +1,72 @@
-import google.generativeai as genai
+from google import genai
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 google_api_key = os.getenv("GOOGLE_API_KEY")
 
-genai.configure(api_key = google_api_key)
+client = genai.Client(api_key = google_api_key)
 
-textModel = genai.GenerativeModel("gemini-2.5-flash-preview-05-20")
-# textModel = genai.GenerativeModel("gemini-2.0-flash")
+response1 = client.models.generate_content(
+    model="gemini-2.0-flash",
+    contents="Tell me a short joke about Google.",
+    #contents="You're a world-class comedian. You're currently standing on a stage at a comedy show in front of 2500 people. Tell the audience a short joke about Google.",
+)
+
+reponse2 = client.models.generate_content(
+    model="gemini-2.5-flash-preview-05-20",
+    contents="Explain how AI works in a few words",
+    )
+
+
+def generate_text_from_input(prompt_text: str, model_name: str = "gemini-2.0-flash"):
+    """Generates text using the specified model and prompt."""
+    try:
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt_text,
+        )
+        print("the response is:")
+        print(response.text)
+        return response.text
+    except Exception as e:
+        print(f"Error generating text: {e}")
+        return "Could not generate text."
 
 
 def get_google_joke():
     """Generates and returns a short joke about Google."""
     try:
-        googleResponse = textModel.generate_content("You're a world class stand-up comedian. You're standing in front of a crowd with 2500 people. Tell the croud a short joke about Google.")
-        return googleResponse.text
+        return response1.text
     except Exception as e:
         print(f"Error generating joke: {e}")
         return "Could not fetch a joke."
 
 def list_available_models():
-    """Prints the names of models that support 'generateContent'."""
-    for model in genai.list_models():
-        if "generateContent" in model.supported_generation_methods:
-            print(model.name)
-            print()
+    """Prints the names of available models."""
+    print("Listing all available models:")
+    try:
+        print("Available models:")
+        for model in client.models.list():
+            print(f"- {model.name}")
+    except Exception as e:
+        print(f"Error listing models: {e}")
+
 
 # This block runs only when apiTest.py is executed directly (not when imported)
 if __name__ == "__main__":
-    print("Available models:")
-    list_available_models()
+    #list_available_models()
     
     print("\nFetching a Google joke:")
     joke = get_google_joke()
     print(joke)
+
+    print("\nText from custom input:")
+    custom_prompt = "Explain what a transformer is in AI to a student in two sentences."
+    generated_answer = generate_text_from_input(custom_prompt)
+    print(f"Prompt: {custom_prompt}")
+    print(f"Answer: {generated_answer}")
+
 
     #response2 = textModel.generate_content("Have you read Leopold Aschenbrenner's essay 'Situational Awareness'?")
     # print(response2.text)

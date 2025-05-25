@@ -1,5 +1,7 @@
 import pygame
 from entity import Entity
+from apiTest import get_google_joke
+
 
 class Wizard(Entity):
     def __init__(self, x, y, interaction_radius=30, interaction_offset_y=28):
@@ -30,7 +32,14 @@ class Wizard(Entity):
         self.interaction_center_x = self.rect.centerx
         self.interaction_center_y = self.rect.bottom + interaction_offset_y # Offset below the wizard
         self.static_interaction_center = (self.interaction_center_x, self.interaction_center_y)
-        self.interaction_message = "Press E to Visit to The Wizard. Press Q to Move On"
+        
+        wizard_joke = get_google_joke()
+        if wizard_joke == "Could not fetch a joke": 
+            self.interaction_message = "Press E to Visit to The Wizard. Press Q to Move On"
+        else:
+            self.interaction_message = f"Wizard says:\n \"{wizard_joke}\" \nPress E to Visit to The Wizard. Press Q to Move On"
+
+        #self.interaction_message = "Press E to Visit to The Wizard. Press Q to Move On"
 
 
     def get_interaction_properties(self):
