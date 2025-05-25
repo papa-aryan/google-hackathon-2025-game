@@ -127,10 +127,26 @@ last_direction_keydown_event = None # Added to track the last directional key ev
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False # Correctly set running to False
+            running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE: # Optional: Add an escape key to quit
+            if event.key == pygame.K_ESCAPE: # Check for ESC key press
                 running = False
+            elif event.key == pygame.K_u: # Check for 'U' key press
+                print("'U' key pressed. Attempting to reload and refresh map data...")
+                try:
+                    # Reload the map modules
+                    importlib.reload(tilemap)
+                    importlib.reload(wizardHouse) # Reload other map modules if you have them
+                    print("Map modules reloaded.")
+
+                    # Refresh the map data in MapManager using the reloaded modules
+                    # The player object might not be strictly needed if refresh doesn't move it,
+                    # but pass relevant objects if your refresh logic expands.
+                    map_manager.refresh_active_map_after_reload(update_map_dimensions_from_manager)
+                    print("Map data refreshed in MapManager.")
+
+                except Exception as e:
+                    print(f"Error during map reload/refresh: {e}")
             
             last_direction_keydown_event = event.key # Update last direction key
 

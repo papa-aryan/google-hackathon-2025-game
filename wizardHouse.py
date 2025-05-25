@@ -11,14 +11,19 @@ EMPTY_TILE_ID = -1
 # 100: Wall tile, 41: Floor tile, 150: Door/Exit tile
 # Table: 200-202 (top row), 245-247 (bottom row)
 HOUSE_MAP = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 16, 16],
-    [0, 0, 0, 0, 0, 0, 0, 0, 16, 16],
-    [0, 0, 0, 0, 0, 0, 0, 0, 16, 16],
-    [0, 0, 0, 32, 32, 32, 0, 0, 0, 0],
-    [0, 0, 0, 32, 32, 32, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    [1 , 2 , 2 , 2 , 2 , 2 , 2 , 2 , 2 , 2 , 6 , -1],
+    [17, 18, 19, 19, 19, 19, 19, 19, 19, 20, 22],
+    [17, 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 22],
+    [17, 0 , 0 , 32, 32, 32, 0 , 0 , 0 , 0 , 22],
+    [17, 0 , 0 , 32, 32, 32, 0 , 0 , 0 , 0 , 22],
+    [17, 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 22],
+    [17, 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 22],
+    [17, 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 22],
+    [17, 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 22],
+    [33, 3 , 3 , 3 , 3 , 3 , 3 , 3 , 3 , 3 , 38],
+    [-1],
+    [-1]
+
 ]
 
 HOUSE_BUILDING_MAP = [
@@ -26,14 +31,16 @@ HOUSE_BUILDING_MAP = [
 ]
 
 HOUSE_COLLISION_MAP = [
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 1, 1, 1, 0, 0, 0, 1], # Example: Table collision
-    [1, 0, 0, 1, 1, 1, 0, 0, 0, 1], # Example: Table collision
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ]
 
 # New decoration layer
@@ -41,14 +48,14 @@ HOUSE_COLLISION_MAP = [
 # Use EMPTY_TILE_ID for no decoration, and other tile IDs from InteriorTiles.png for decorations
 # These are placeholder IDs, update them with actual IDs from InteriorTiles.png
 HOUSE_DECORATION_MAP = [
-    [EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID],
-    [EMPTY_TILE_ID, 80, EMPTY_TILE_ID, EMPTY_TILE_ID, 48, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID], # Example: a plant (tile ID 48)
-    [EMPTY_TILE_ID, 80, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID],
-    [EMPTY_TILE_ID, 80, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, 52, EMPTY_TILE_ID, EMPTY_TILE_ID], # Example: a carpet (tile ID 52)
-    [EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID],
-    [EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID],
-    [EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID],
-    [EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID, EMPTY_TILE_ID],
+    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+    [-1, 80, 80, -1, -1, -1, -1, -1, -1, -1], # Example: a plant (tile ID 48)
+    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1],
+    [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
 ]
 
 PLAYER_START_X_TILE = 4

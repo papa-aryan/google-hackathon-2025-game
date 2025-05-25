@@ -19,10 +19,11 @@ class MapManager:
             print(f"Switched to map: {map_name}")
 
             # CORRECTED KEY and ADDED tileset_width argument
+            # Ensure tilemap.init_tilemap is called to load the correct tileset
             tilemap.init_tilemap(
                 self.current_map_data["tileset_path"],
-                self.current_map_data["tileset_width"], # Pass the specific width
-                self.current_map_data["tile_orig_size"] # Pass the specific original tile size
+                self.current_map_data["tileset_width"], 
+                self.current_map_data["tile_orig_size"] 
             )
 
 
@@ -72,6 +73,46 @@ class MapManager:
 
     def get_current_tile_size(self):
         return self.current_map_data["tile_size"]
+
+    def refresh_active_map_after_reload(self, update_dimensions_func):
+        """
+        Refreshes the current map's data after its source module has been reloaded.
+        This method assumes that importlib.reload() has been called on the relevant
+        map module (e.g., tilemap.py, wizardHouse.py) before this is called.
+        """
+        print(f"Refreshing data for map: {self.current_map_name} from reloaded modules.")
+        
+        fresh_map_data = None
+        if self.current_map_name == "main_map":
+            fresh_map_data = tilemap.get_main_map_data()
+        elif self.current_map_name == "wizard_house":
+            fresh_map_data = wizardHouse.get_wizard_house_data()
+        else:
+            print(f"Warning: Unknown map name '{self.current_map_name}' during refresh.")
+            return
+
+        if fresh_map_data:
+            self.maps[self.current_map_name] = fresh_map_data
+            self.current_map_data = fresh_map_data
+
+            # Re-initialize tilemap's rendering system with the current map's tileset.
+            # This is crucial because reloading the tilemap module resets its globals
+            # like tileset_img and tile_rects.
+            tilemap.init_tilemap(
+                self.current_map_data["tileset_path"],
+                self.current_map_data["tileset_width"],
+                self.current_map_data["tile_orig_size"]
+            )
+
+            # Update game-wide map dimensions based on the reloaded data
+            new_map_width_pixels = len(self.current_map_data["map_layout"][0]) * self.current_map_data["tile_size"]
+            new_map_height_pixels = len(self.current_map_data["map_layout"]) * self.current_map_data["tile_size"]
+            update_dimensions_func(new_map_width_pixels, new_map_height_pixels)
+            
+            print(f"Map '{self.current_map_name}' data refreshed and dimensions updated.")
+        else:
+            print(f"Error: Could not get fresh map data for '{self.current_map_name}'.")
+
 
     def can_move(self, world_x, world_y):
         """Checks if the given world coordinates are walkable on the current map."""
