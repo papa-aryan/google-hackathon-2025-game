@@ -61,16 +61,63 @@ HOUSE_DECORATION_MAP = [
 PLAYER_START_X_TILE = 4
 PLAYER_START_Y_TILE = 5
 
+class ExitPortal:
+    def __init__(self, x_tile_idx, y_tile_idx, tile_size, radius, message, id="exit_portal"): # Added id parameter
+        self.id = id # Use the provided id
+        # Calculate center in pixels from tile indices (center of the tile)
+        self.center_x = (x_tile_idx + 0.5) * tile_size
+        self.center_y = (y_tile_idx + 0.5) * tile_size
+        self.radius = radius
+        self.message = message
+        self.color = (0, 255, 0)  # Green color for the exit portal circle
+        self.thickness = 3       # Thickness of the circle outline
+
+    def get_interaction_properties(self):
+        """Returns a dictionary of properties needed for interaction management."""
+        return {
+            "id": self.id,
+            "center": (self.center_x, self.center_y), # This is in world coordinates
+            "radius": self.radius,
+            "message": self.message,
+            "color": self.color,
+            "thickness": self.thickness
+        }
+
 def get_wizard_house_data():
+    # Define the portal for the wizard's house - THIS WILL BE REMOVED
+    # Placing it at tile (column 9, row 8) which is HOUSE_MAP[8][9]
+    # This corresponds to the 10th column and 9th row (0-indexed).
+    # portal_tile_x = 9 
+    # portal_tile_y = 8 
+    # exit_portal = ExitPortal(
+    #     x_tile_idx=portal_tile_x,
+    #     y_tile_idx=portal_tile_y,
+    #     tile_size=TILE_GAME_SIZE, # Use TILE_GAME_SIZE for pixel calculation
+    #     radius=30, # Similar radius to the wizard's interaction
+    #     message="Press E to go back to Town. Press Q to stay with the Wizard",
+    #     id="wizard_house_exit_portal" # Assign specific ID
+    # )
+
+    # Create the new interactive circle for the "stay query"
+    # Adjusted position to be up and to the left
+    stay_query_circle = ExitPortal(
+        x_tile_idx=7,  # Moved left
+        y_tile_idx=7,  # Moved up
+        tile_size=TILE_GAME_SIZE,
+        radius=30,
+        message="Press E to go back to Town. Press Q to stay with the Wizard", # User-specified message
+        id="wizard_house_stay_query_circle" # Unique ID for the new circle
+    )
+
     return {
-        "name": "wizard_house", # Added name for consistency
         "map_layout": HOUSE_MAP,
         "building_layout": HOUSE_BUILDING_MAP,
-        "decoration_layout": HOUSE_DECORATION_MAP, # ADDED: Decoration layer
         "collision_layout": HOUSE_COLLISION_MAP,
-        "tile_size": TILE_GAME_SIZE, # Game size for rendering
-        "tileset_path": 'InteriorTiles.png', # Use new tileset path
-        "tileset_width": TILESET_WIDTH_HOUSE, # Tileset width for this map
-        "tile_orig_size": TILE_ORIG_SIZE, # ADDED: Original tile size for this tileset
-        "entry_point_tile": (PLAYER_START_X_TILE, PLAYER_START_Y_TILE)
+        "decoration_layout": HOUSE_DECORATION_MAP,
+        "tile_size": TILE_GAME_SIZE,
+        "tile_orig_size": TILE_ORIG_SIZE,
+        "tileset_path": "InteriorTiles.png",
+        "tileset_width": TILESET_WIDTH_HOUSE,
+        "entry_point_tile": (PLAYER_START_X_TILE, PLAYER_START_Y_TILE),
+        "map_interactables": [stay_query_circle] # Only include the single, adjusted circle
     }

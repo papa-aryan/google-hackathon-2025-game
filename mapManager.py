@@ -11,9 +11,15 @@ class MapManager:
         }
         self.current_map_name = "main_map"
         self.current_map_data = self.maps[self.current_map_name]
+        self.current_map_specific_interactables = [] # Stores interactables loaded for the current map
 
     def switch_map(self, map_name, player, wizard_sprite, all_sprites_group, interaction_mgr, update_dimensions_func): # MODIFIED SIGNATURE
         if map_name in self.maps:
+            # Clear existing map-specific interactables from the previous map
+            for interactable in self.current_map_specific_interactables:
+                interaction_mgr.remove_interactable(interactable.id)
+            self.current_map_specific_interactables = []
+
             self.current_map_name = map_name
             self.current_map_data = self.maps[map_name]
             print(f"Switched to map: {map_name}")
@@ -25,6 +31,13 @@ class MapManager:
                 self.current_map_data["tileset_width"], 
                 self.current_map_data["tile_orig_size"] 
             )
+
+            # Load and register new map-specific interactables for the current map
+            new_map_interactables = self.current_map_data.get("map_interactables", [])
+            for interactable_obj in new_map_interactables:
+                interaction_mgr.add_interactable(interactable_obj)
+                self.current_map_specific_interactables.append(interactable_obj)
+            print(f"Loaded {len(self.current_map_specific_interactables)} map-specific interactables for {map_name}.")
 
 
             # Update game-wide map dimensions
@@ -47,13 +60,18 @@ class MapManager:
             
             # Potentially hide/show NPCs based on the current map
             if map_name == "wizard_house":
-                if wizard_sprite in all_sprites_group: # MODIFIED
-                    all_sprites_group.remove(wizard_sprite) # MODIFIED
-                    interaction_mgr.remove_interactable(wizard_sprite.id) # MODIFIED
+                if wizard_sprite in all_sprites_group: # Check if it's there before removing
+                    all_sprites_group.remove(wizard_sprite)
+                interaction_mgr.remove_interactable(wizard_sprite.id) # Use ID for removal
+                print(f"Wizard removed from house map.")
             elif map_name == "main_map":
-                if wizard_sprite not in all_sprites_group: # MODIFIED
-                    all_sprites_group.add(wizard_sprite) # MODIFIED
-                    interaction_mgr.add_interactable(wizard_sprite) # MODIFIED
+                if wizard_sprite not in all_sprites_group: # Check if it's not there before adding
+                    all_sprites_group.add(wizard_sprite)
+                # Ensure wizard is re-added if not already present (e.g. after being removed from another map)
+                # Check if wizard is already in interactables to avoid duplicate processing if logic changes
+                # For now, simply adding it back is the existing pattern.
+                interaction_mgr.add_interactable(wizard_sprite) 
+                print(f"Wizard added to main map.")
 
 
         else:
@@ -74,14 +92,22 @@ class MapManager:
     def get_current_tile_size(self):
         return self.current_map_data["tile_size"]
 
-    def refresh_active_map_after_reload(self, update_dimensions_func):
+    def refresh_active_map_after_reload(self, update_dimensions_func, interaction_mgr=None): # Added interaction_mgr
         """
         Refreshes the current map's data after its source module has been reloaded.
         This method assumes that importlib.reload() has been called on the relevant
         map module (e.g., tilemap.py, wizardHouse.py) before this is called.
+        Now also handles refreshing map-specific interactables if interaction_mgr is provided.
         """
         print(f"Refreshing data for map: {self.current_map_name} from reloaded modules.")
         
+        # Clear old map-specific interactables if manager is provided
+        if interaction_mgr:
+            for interactable in self.current_map_specific_interactables:
+                interaction_mgr.remove_interactable(interactable.id)
+            self.current_map_specific_interactables = []
+            print("Cleared old map-specific interactables before refresh.")
+
         fresh_map_data = None
         if self.current_map_name == "main_map":
             fresh_map_data = tilemap.get_main_map_data()
@@ -103,6 +129,14 @@ class MapManager:
                 self.current_map_data["tileset_width"],
                 self.current_map_data["tile_orig_size"]
             )
+
+            # Reload map-specific interactables if manager is provided
+            if interaction_mgr:
+                new_map_interactables = self.current_map_data.get("map_interactables", [])
+                for interactable_obj in new_map_interactables:
+                    interaction_mgr.add_interactable(interactable_obj)
+                    self.current_map_specific_interactables.append(interactable_obj)
+                print(f"Reloaded {len(self.current_map_specific_interactables)} map-specific interactables for {self.current_map_name}.")
 
             # Update game-wide map dimensions based on the reloaded data
             new_map_width_pixels = len(self.current_map_data["map_layout"][0]) * self.current_map_data["tile_size"]
