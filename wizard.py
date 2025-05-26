@@ -1,6 +1,7 @@
 import pygame
 from entity import Entity
 from apiTest import get_google_joke
+import threading # Import threading
 
 
 class Wizard(Entity):
@@ -18,7 +19,6 @@ class Wizard(Entity):
         self.image = self.image_right # Set current image to the scaled right-facing one
 
         # Update rect with the new scaled image and position
-        # current_center = self.rect.center # Preserve center if needed, or just top-left
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y) # Reset position based on initial x, y
 
@@ -33,14 +33,41 @@ class Wizard(Entity):
         self.interaction_center_y = self.rect.bottom + interaction_offset_y # Offset below the wizard
         self.static_interaction_center = (self.interaction_center_x, self.interaction_center_y)
         
-        wizard_joke = get_google_joke()
-        if wizard_joke == "Could not fetch a joke": 
-            self.interaction_message = "Press E to Visit to The Wizard. Press Q to Move On"
+        self.prompt_talk = "Press E to Hear a Joke. Press Q to Move On."
+        self.prompt_visit_or_leave = "Press E to Visit The Wizard. Press Q to Move On."
+        
+        self.interaction_message = self.prompt_talk # Initial message
+        self.is_fetching_joke = False
+        self.joke_fetch_thread = None
+        self.new_message_to_type = False # Flag for main loop to start typing
+
+    def request_new_joke(self):
+        if not self.is_fetching_joke:
+            self.is_fetching_joke = True
+            self.interaction_message = "Wizard is thinking..."
+            self.new_message_to_type = True # Signal to type "thinking..."
+            # Ensure apiTest.get_google_joke is thread-safe or doesn't interact with Pygame directly
+            self.joke_fetch_thread = threading.Thread(target=self._fetch_and_update_joke)
+            self.joke_fetch_thread.daemon = True # Allow main program to exit even if thread is running
+            self.joke_fetch_thread.start()
+
+    def _fetch_and_update_joke(self):
+        # get_google_joke is an API call, so it's fine in a thread
+        joke = get_google_joke() 
+        if joke == "Could not fetch a joke":
+            self.interaction_message = f"Wizard seems to have forgotten the joke.\n{self.prompt_visit_or_leave}"
         else:
-            self.interaction_message = f"Wizard says:\n \"{wizard_joke}\" \nPress E to Visit to The Wizard. Press Q to Move On"
+            # Ensure joke string is clean for display (e.g., escape newlines if necessary, though f-string handles it)
+            self.interaction_message = f"Wizard says:\n\"{joke}\"\n{self.prompt_visit_or_leave}"
+        self.is_fetching_joke = False
+        self.new_message_to_type = True # Signal to type the joke/result
 
-        #self.interaction_message = "Press E to Visit to The Wizard. Press Q to Move On"
-
+    def reset_interaction_state(self):
+        """Resets the wizard's message to the initial talk prompt."""
+        self.interaction_message = self.prompt_talk
+        self.is_fetching_joke = False 
+        self.new_message_to_type = False # Don't type the reset message, just set it
+        # If a thread is running, it will complete, but its result might be ignored or overwritten.
 
     def get_interaction_properties(self):
         """Returns a dictionary of properties needed for interaction management."""

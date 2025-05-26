@@ -7,11 +7,7 @@ google_api_key = os.getenv("GOOGLE_API_KEY")
 
 client = genai.Client(api_key = google_api_key)
 
-response1 = client.models.generate_content(
-    model="gemini-2.0-flash",
-    contents="Tell me a short joke about Google.",
-    #contents="You're a world-class comedian. You're currently standing on a stage at a comedy show in front of 2500 people. Tell the audience a short joke about Google.",
-)
+
 
 reponse2 = client.models.generate_content(
     model="gemini-2.5-flash-preview-05-20",
@@ -37,6 +33,11 @@ def generate_text_from_input(prompt_text: str, model_name: str = "gemini-2.0-fla
 def get_google_joke():
     """Generates and returns a short joke about Google."""
     try:
+        response1 = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents="Tell me a short joke about Google that has never been said before. ",
+            #contents="You're a world-class comedian. You're currently standing on a stage at a comedy show in front of 2500 people. Tell the audience a short joke about Google.",
+)
         return response1.text
     except Exception as e:
         print(f"Error generating joke: {e}")

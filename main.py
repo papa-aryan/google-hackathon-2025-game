@@ -31,6 +31,14 @@ pygame.font.init()
 # Font for interaction popup
 interaction_font = pygame.font.Font(None, 72) # Added font
 
+# Typewriter effect state
+typing_active = False
+text_to_type_full = ""
+typed_text_display = ""
+typing_char_index = 0
+typing_last_char_time = 0
+TYPING_DELAY_MS = 40  # Milliseconds per character, adjust for speed
+
 # Game state for wizard interaction (These will be managed by InteractionManager or influenced by it)
 show_interaction_popup = False
 player_can_move = True
@@ -125,11 +133,13 @@ game_camera = Camera(screen_width, screen_height) # Create Camera instance
 running = True
 last_direction_keydown_event = None # Added to track the last directional key event
 while running:
+    current_time_ticks = pygame.time.get_ticks() # Get current time once per frame for typing
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE: # Check for ESC key press
+            if event.key == pygame.K_ESCAPE: 
                 running = False
             elif event.key == pygame.K_u: # Check for 'U' key press
                 print("'U' key pressed. Attempting to reload and refresh map data...")
@@ -148,103 +158,142 @@ while running:
                 except Exception as e:
                     print(f"Error during map reload/refresh: {e}")
             
-            last_direction_keydown_event = event.key # Update last direction key
+            last_direction_keydown_event = event.key 
 
             if show_interaction_popup and eligible_interactable:
-                if event.key == pygame.K_e: # Player presses E to interact
-                    print(f"E pressed. Interacting with: {eligible_interactable.id}")
+                if event.key == pygame.K_e: 
                     if eligible_interactable.id == "wizard":
-                        # Player is interacting with the wizard
-                        interaction_manager.set_interacted_flag(wizard.id, True) # Mark as interacted for this visit
-                        show_interaction_popup = False # Hide popup
-                        player_can_move = True # Allow player to move again
-                        map_manager.switch_map(
-                            "wizard_house", 
-                            player, 
-                            wizard,                 # Pass wizard instance
-                            all_sprites,            # Pass all_sprites group
-                            interaction_manager,    # Pass interaction_manager instance
-                            update_map_dimensions_from_manager # Pass callback function
-                        )
-                        print("Teleported to Wizard's House.")
+                        # Use the wizard instance directly
+                        current_wizard_message = wizard.interaction_message
+                        if wizard.is_fetching_joke:
+                            print("Wizard is still thinking...")
+                            # Typing for "thinking..." is handled by the main typing logic
+                        elif wizard.prompt_visit_or_leave in current_wizard_message:
+                            # Joke/result displayed, E means "Visit The Wizard"
+                            print(f"E pressed. Visiting Wizard's House.")
+                            interaction_manager.set_interacted_flag(wizard.id, True)
+                            show_interaction_popup = False
+                            player_can_move = True
+                            typing_active = False # Stop any typing
+                            map_manager.switch_map(
+                                "wizard_house", 
+                                player, 
+                                wizard,                 
+                                all_sprites,            
+                                interaction_manager,    
+                                update_map_dimensions_from_manager 
+                            )
+                            wizard.reset_interaction_state() # Reset for next time on main map
+                            print("Teleported to Wizard's House.")
+                        elif wizard.prompt_talk in current_wizard_message:
+                            # Initial E press, message is the "talk" prompt
+                            print(f"E pressed. Requesting joke from Wizard.")
+                            wizard.request_new_joke()
+                            # Popup remains, player cannot move. Typing will be triggered by wizard.new_message_to_type.
+                        else:
+                            # Fallback for unexpected wizard message state
+                            print(f"Wizard in unexpected message state for E press: {current_wizard_message}")
                     
                     elif eligible_interactable.id == "wizard_house_stay_query_circle":
-                        # This was previously the "go back to town" action.
-                        # Now, 'E' is for "talk to the Wizard" as per your new message.
-                        # For now, it will just close the popup. You can add specific "talk" logic later.
-                        interaction_manager.set_interacted_flag(eligible_interactable.id, True)
+                        print(f"E pressed. Staying in Wizard's House.")
+                        # Logic to stay in the wizard's house (e.g., close popup, allow movement)
                         show_interaction_popup = False
                         player_can_move = True
-                        print(f"E pressed for {eligible_interactable.id}. Action: Talk to Wizard (closes popup for now).")
-
-                elif event.key == pygame.K_q: # Player presses Q
+                        typing_active = False # Stop typing
+                elif event.key == pygame.K_q: 
                     print(f"Q pressed with eligible interactable: {eligible_interactable.id if eligible_interactable else 'None'}.")
                     if eligible_interactable:
-                        if eligible_interactable.id == "wizard_house_stay_query_circle":
-                            # Player presses Q to go back to Town from Wizard's House
-                            interaction_manager.set_interacted_flag(eligible_interactable.id, True)
+                        if eligible_interactable.id == "wizard":
+                            print(f"Q pressed. Moving on from Wizard.")
+                            interaction_manager.set_interacted_flag(wizard.id, True)
                             show_interaction_popup = False
                             player_can_move = True
-                            
+                            typing_active = False # Stop typing
+                            wizard.reset_interaction_state() # Reset wizard's state
+                        elif eligible_interactable.id == "wizard_house_stay_query_circle":
+                            print(f"Q pressed. Returning to Main Map from Wizard's House.")
+                            interaction_manager.set_interacted_flag(eligible_interactable.id, True) # Mark as interacted
+                            show_interaction_popup = False
+                            player_can_move = True
+                            typing_active = False # Stop typing
                             map_manager.switch_map(
-                                "main_map",
-                                player,
-                                wizard, # wizard object is the main map wizard
-                                all_sprites,
-                                interaction_manager,
+                                "main_map", 
+                                player, 
+                                wizard, 
+                                all_sprites, 
+                                interaction_manager, 
                                 update_map_dimensions_from_manager
                             )
-                            print("Returning to Main Map from Wizard's House via Q key.")
-
-                            # Adjust player position to be below the wizard's circle on the main map
-                            wizard_main_map_props = wizard.get_interaction_properties()
-                            target_x = wizard_main_map_props['center'][0]
-                            # Position player's top edge just below the circle's bottom edge with a small gap
-                            target_y_top = wizard_main_map_props['center'][1] + wizard_main_map_props['radius'] + 5 
-
-                            player.rect.centerx = int(target_x)
-                            player.rect.top = int(target_y_top)
+                            player_target_x_center = wizard.static_interaction_center[0]
+                            player_target_y_bottom = wizard.static_interaction_center[1] + wizard.interaction_radius + 100 # 10px buffer below circle
                             
-                            print(f"Player repositioned to top: {player.rect.top}, centerx: {player.rect.centerx} on main_map.")
-                        else:
-                            # Generic Q action for other interactables (move on)
-                            print(f"Q pressed. Moving on from interaction with {eligible_interactable.id}.")
-                            interaction_manager.set_interacted_flag(eligible_interactable.id, True)
+                            player.rect.centerx = player_target_x_center
+                            player.rect.bottom = player_target_y_bottom
+
+                            wizard.reset_interaction_state() # Also reset main map wizard if returning
+                            print("Returning to Main Map from Wizard's House via Q key.")
+                        elif eligible_interactable.id == "wizard_in_house":
+                            print(f"Q pressed. Leaving conversation with Wizard in House.")
                             show_interaction_popup = False
                             player_can_move = True
-                    else:
-                        # Q pressed when no interactable is eligible (should ideally not happen if popup isn't shown)
-                        show_interaction_popup = False
-                        player_can_move = True
+                            typing_active = False # Stop typing
+                            # Potentially reset wizard_in_house state if it has one
+                            # wizard_in_house.reset_interaction_state() # If applicable
     
-    if not running: # Check if running is false to break loop before processing more
+    if not running: 
         break
 
-    # Handle continuous key presses for movement
     keys = pygame.key.get_pressed()
     if player_can_move:
-        # Pass the MapManager's can_move method for collision detection
         player.update_position(keys, map_width, map_height, last_direction_keydown_event, map_manager.can_move)
 
-    # Update Interaction Manager
     interaction_manager.update(player.rect.center)
     
-    # Determine if popup should be shown based on InteractionManager
     eligible_interactable = interaction_manager.get_eligible_interactable()
     if eligible_interactable:
-        if not show_interaction_popup: # Only set to true if it wasn't already
+        if not show_interaction_popup: 
             show_interaction_popup = True
-            player_can_move = False # Stop player movement when popup appears
-            print(f"Player entered {eligible_interactable.id}\'s interaction circle. Popup shown.")
+            player_can_move = False 
+            print(f"Player entered {eligible_interactable.id}'s interaction circle. Popup shown.")
+            # Check if we need to start typing a new message immediately
+            if eligible_interactable.id == "wizard" and wizard.new_message_to_type:
+                props = wizard.get_interaction_properties() # Get current message
+                text_to_type_full = props['message']
+                typed_text_display = "" # Start with one char to avoid empty split issues if first char is newline
+                typing_char_index = 0
+                typing_last_char_time = current_time_ticks 
+                typing_active = True
+                wizard.new_message_to_type = False # Consume the flag
+
     elif show_interaction_popup: # No eligible interactable, but popup is shown
         show_interaction_popup = False
         player_can_move = True
+        typing_active = False # Stop typing if popup is hidden
         # print("Popup hidden because no eligible interactable or player moved away.")
 
+    # Handle typewriter effect for active popup
+    if typing_active and show_interaction_popup:
+        if current_time_ticks - typing_last_char_time > TYPING_DELAY_MS:
+            if typing_char_index < len(text_to_type_full):
+                typed_text_display += text_to_type_full[typing_char_index]
+                typing_char_index += 1
+                typing_last_char_time = current_time_ticks
+            else:
+                typing_active = False # Typing finished
+    
+    # Check if wizard has a new message to type (e.g., after thinking)
+    if show_interaction_popup and eligible_interactable and eligible_interactable.id == "wizard":
+        if wizard.new_message_to_type and not typing_active: # Start typing if new message and not already typing
+            props = wizard.get_interaction_properties()
+            text_to_type_full = props['message']
+            typed_text_display = ""
+            typing_char_index = 0
+            typing_last_char_time = current_time_ticks
+            typing_active = True
+            wizard.new_message_to_type = False
 
-    # Update camera position to keep player centered
-    game_camera.update(player, map_width, map_height) # map_width and map_height are now dynamic
 
+    game_camera.update(player, map_width, map_height) 
     # Update all sprites (including the wizard's own update logic)
     # Sprites list is managed by map_manager for map-specific NPCs
     all_sprites.update() 
@@ -281,8 +330,15 @@ while running:
 
     # Draw interaction popup if active
     if show_interaction_popup and eligible_interactable:
-        props = eligible_interactable.get_interaction_properties()
-        popup_text_lines = props['message'].split('\n') # Split the message by newline character
+        current_message_for_popup = ""
+        if typing_active:
+            current_message_for_popup = typed_text_display
+        else:
+            # For non-wizard interactables or if wizard is not typing
+            props = eligible_interactable.get_interaction_properties()
+            current_message_for_popup = props['message']
+        
+        popup_text_lines = current_message_for_popup.split('\n') # Split the message by newline character
         
         # Calculate total height and max width for the background
         line_height = interaction_font.get_linesize()
