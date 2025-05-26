@@ -1,7 +1,9 @@
 import pygame
 from entity import Entity
 from apiTest import get_google_joke
-import threading # Import threading
+import threading 
+import textwrap 
+
 
 
 class Wizard(Entity):
@@ -54,11 +56,15 @@ class Wizard(Entity):
     def _fetch_and_update_joke(self):
         # get_google_joke is an API call, so it's fine in a thread
         joke = get_google_joke() 
-        if joke == "Could not fetch a joke":
-            self.interaction_message = f"Wizard seems to have forgotten the joke.\n{self.prompt_visit_or_leave}"
+        WRAP_WIDTH = 50 # Adjust this width as needed
+
+        if joke is None or joke == "Could not fetch a joke.": # Check for None and the exact error string
+            self.interaction_message = f"Wizard seems to have forgotten the joke. Please try again later.\n{self.prompt_visit_or_leave}"
         else:
+            # Wrap the joke before adding it to the message
+            wrapped_joke = textwrap.fill(joke, width=WRAP_WIDTH)
             # Ensure joke string is clean for display (e.g., escape newlines if necessary, though f-string handles it)
-            self.interaction_message = f"Wizard says:\n\"{joke}\"\n{self.prompt_visit_or_leave}"
+            self.interaction_message = f"Wizard says:\n\"{wrapped_joke}\"\n{self.prompt_visit_or_leave}"
         self.is_fetching_joke = False
         self.new_message_to_type = True # Signal to type the joke/result
 

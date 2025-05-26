@@ -359,17 +359,54 @@ while running:
         popup_bg_rect_x = (screen_width - popup_bg_rect_width) // 2
         popup_bg_rect_y = screen_height - popup_bg_rect_height - 40 # Position near bottom, adjust 40 as needed
         
-        popup_bg_rect = pygame.Rect(popup_bg_rect_x, popup_bg_rect_y, popup_bg_rect_width, popup_bg_rect_height)
-        pygame.draw.rect(screen, (200, 200, 200), popup_bg_rect) # Light grey background
-        pygame.draw.rect(screen, (0, 0, 0), popup_bg_rect, 2) # Black border
+        main_popup_bg_rect = pygame.Rect(popup_bg_rect_x, popup_bg_rect_y, popup_bg_rect_width, popup_bg_rect_height)
+        pygame.draw.rect(screen, (200, 200, 200), main_popup_bg_rect) # Light grey background
+        pygame.draw.rect(screen, (0, 0, 0), main_popup_bg_rect, 2) # Black border
 
         # Blit each line
-        current_y = popup_bg_rect.top + 5 # Start y for the first line (inside the padding)
+        current_y = main_popup_bg_rect.top + 5 # Start y for the first line (inside the padding)
         for text_surface in rendered_lines:
-            text_rect = text_surface.get_rect(centerx=popup_bg_rect.centerx, top=current_y)
+            text_rect = text_surface.get_rect(centerx=main_popup_bg_rect.centerx, top=current_y)
             screen.blit(text_surface, text_rect)
             current_y += line_height
 
+        # --- BEGIN: Draw second, non-typewritten popup for wizard's E/Q options ---
+        if eligible_interactable.id == "wizard" and \
+           wizard.prompt_visit_or_leave in wizard.interaction_message and \
+           not wizard.is_fetching_joke and \
+           wizard.interaction_message != wizard.prompt_talk:
+
+            second_popup_text_content = wizard.prompt_visit_or_leave
+            second_popup_lines = second_popup_text_content.split('\n')
+            
+            second_total_text_height = len(second_popup_lines) * line_height
+            
+            second_rendered_lines = []
+            second_max_line_width = 0
+            for line in second_popup_lines:
+                text_surface = interaction_font.render(line, True, (0, 0, 0)) # Black text
+                second_rendered_lines.append(text_surface)
+                if text_surface.get_width() > second_max_line_width:
+                    second_max_line_width = text_surface.get_width()
+
+            second_popup_bg_rect_width = second_max_line_width + 20 # Padding
+            second_popup_bg_rect_height = second_total_text_height + 10 # Padding
+            
+            second_popup_bg_rect_x = (screen_width - second_popup_bg_rect_width) // 2
+            # Position second popup above the main one
+            second_popup_bg_rect_y = main_popup_bg_rect.top - second_popup_bg_rect_height - 10 # 10px spacing above main popup
+
+            second_popup_bg_rect = pygame.Rect(second_popup_bg_rect_x, second_popup_bg_rect_y, second_popup_bg_rect_width, second_popup_bg_rect_height)
+            pygame.draw.rect(screen, (220, 220, 200), second_popup_bg_rect) # Slightly different background
+            pygame.draw.rect(screen, (0, 0, 0), second_popup_bg_rect, 2) # Black border
+
+            current_y_second = second_popup_bg_rect.top + 5 # Start y for the first line
+            for text_surface in second_rendered_lines:
+                text_rect = text_surface.get_rect(centerx=second_popup_bg_rect.centerx, top=current_y_second)
+                screen.blit(text_surface, text_rect)
+                current_y_second += line_height
+        # --- END: Draw second popup ---
+    
     # Update the display
     pygame.display.flip()
 
