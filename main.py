@@ -168,7 +168,12 @@ while running:
                         if wizard.is_fetching_joke:
                             print("Wizard is still thinking...")
                             # Typing for "thinking..." is handled by the main typing logic
-                        elif wizard.prompt_visit_or_leave in current_wizard_message:
+                        elif wizard.interaction_message == wizard.prompt_talk:
+                            # Initial E press, message is the "talk" prompt
+                            print(f"E pressed. Requesting joke from Wizard.")
+                            wizard.request_new_joke()
+                            # Popup remains, player cannot move. Typing will be triggered by wizard.new_message_to_type.
+                        else: # Implies joke/result is displayed (not fetching, not initial prompt_talk)
                             # Joke/result displayed, E means "Visit The Wizard"
                             print(f"E pressed. Visiting Wizard's House.")
                             interaction_manager.set_interacted_flag(wizard.id, True)
@@ -185,15 +190,7 @@ while running:
                             )
                             wizard.reset_interaction_state() # Reset for next time on main map
                             print("Teleported to Wizard's House.")
-                        elif wizard.prompt_talk in current_wizard_message:
-                            # Initial E press, message is the "talk" prompt
-                            print(f"E pressed. Requesting joke from Wizard.")
-                            wizard.request_new_joke()
-                            # Popup remains, player cannot move. Typing will be triggered by wizard.new_message_to_type.
-                        else:
-                            # Fallback for unexpected wizard message state
-                            print(f"Wizard in unexpected message state for E press: {current_wizard_message}")
-                    
+
                     elif eligible_interactable.id == "wizard_house_stay_query_circle":
                         print(f"E pressed. Staying in Wizard's House.")
                         # Logic to stay in the wizard's house (e.g., close popup, allow movement)
@@ -372,7 +369,6 @@ while running:
 
         # --- BEGIN: Draw second, non-typewritten popup for wizard's E/Q options ---
         if eligible_interactable.id == "wizard" and \
-           wizard.prompt_visit_or_leave in wizard.interaction_message and \
            not wizard.is_fetching_joke and \
            wizard.interaction_message != wizard.prompt_talk:
 
