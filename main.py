@@ -193,6 +193,7 @@ while running:
                     elif eligible_interactable.id == "wizard_house_stay_query_circle":
                         print(f"E pressed. Staying in Wizard's House.")
                         # Logic to stay in the wizard's house (e.g., close popup, allow movement)
+                        interaction_manager.set_interacted_flag(eligible_interactable.id, True) 
                         show_interaction_popup = False
                         player_can_move = True
                         typing_active = False # Stop typing

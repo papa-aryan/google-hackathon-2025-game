@@ -35,7 +35,7 @@ def get_philosophy_question():
     try:
         response1 = client.models.generate_content(
             model="gemini-2.5-flash-preview-05-20",
-            contents="You are a philosophically inclined AI enthusiast who thinks a very hard about the future and AI. Ask me one deep question that will make me think about the future, AI, humanity or a combination. Keep it short and persuasive.",
+            contents="You are a philosophically inclined AI enthusiast who thinks a very hard about the future and AI. Ask me one deep question that will make me think about the future, AI, humanity or a combination. Keep the language simple. The question should be short and persuasive.",
             #contents="You're a world-class comedian. You're currently standing on a stage at a comedy show in front of 2500 people. Tell the audience a short joke about Google.",
 )
         return response1.text
