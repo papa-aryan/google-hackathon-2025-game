@@ -1,6 +1,6 @@
 import pygame
 from entity import Entity
-from apiTest import get_google_joke
+from apiTest import get_philosophy_question
 import threading 
 import textwrap 
 
@@ -55,7 +55,7 @@ class Wizard(Entity):
 
     def _fetch_and_update_joke(self):
         # get_google_joke is an API call, so it's fine in a thread
-        joke = get_google_joke() 
+        joke = get_philosophy_question() 
         WRAP_WIDTH = 50 # Adjust this width as needed
 
         if joke is None or joke == "Could not fetch a joke.": # Check for None and the exact error string

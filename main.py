@@ -2,7 +2,6 @@ import pygame
 import ctypes
 import sys
 import importlib # Added for reloading modules
-from apiTest import get_google_joke # Assuming this is still needed
 from player import Player # Import Player from player.py
 from camera import Camera # Import Camera from camera.py
 import tilemap # Import the new tilemap module
