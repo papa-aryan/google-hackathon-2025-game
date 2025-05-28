@@ -8,11 +8,13 @@ google_api_key = os.getenv("GOOGLE_API_KEY")
 client = genai.Client(api_key = google_api_key)
 
 
-
 reponse2 = client.models.generate_content(
-    model="gemini-2.5-flash-preview-05-20",
+    model="gemini-1.5-flash",
     contents="Explain how AI works in a few words",
     )
+print("Response from the model:")
+print(reponse2.text)
+
 
 
 def generate_text_from_input(prompt_text: str, model_name: str = "gemini-2.0-flash"):
@@ -58,15 +60,16 @@ def list_available_models():
 if __name__ == "__main__":
     #list_available_models()
     
-    print("\nFetching a Google joke:")
-    joke = get_philosophy_question()
-    print(joke)
+    print("\nFetching Deep question:")
+    question = get_philosophy_question()
+    print(question)
 
-    print("\nText from custom input:")
-    custom_prompt = "Explain what a transformer is in AI to a student in two sentences."
-    generated_answer = generate_text_from_input(custom_prompt)
-    print(f"Prompt: {custom_prompt}")
-    print(f"Answer: {generated_answer}")
+
+    #print("\nText from custom input:")
+    #custom_prompt = "Explain what a transformer is in AI to a student in two sentences."
+    #generated_answer = generate_text_from_input(custom_prompt)
+    #print(f"Prompt: {custom_prompt}")
+    #print(f"Answer: {generated_answer}")
 
 
     #response2 = textModel.generate_content("Have you read Leopold Aschenbrenner's essay 'Situational Awareness'?")
