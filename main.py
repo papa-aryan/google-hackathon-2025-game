@@ -6,6 +6,7 @@ from player import Player # Import Player from player.py
 from camera import Camera # Import Camera from camera.py
 import tilemap # Import the new tilemap module
 from wizard import Wizard # Import the Wizard class
+from naval_npc import NavalNPC # Import the Naval NPC class
 from interaction_manager import InteractionManager # Import InteractionManager
 from mapManager import MapManager # Import MapManager
 from chat_manager import ChatManager # Import ChatManager
@@ -108,9 +109,15 @@ wizard_x = 439
 wizard_y = 388
 wizard = Wizard(wizard_x, wizard_y, interaction_radius=30, interaction_offset_y=28)
 
+# Create Naval NPC instance at a different location
+naval_npc_x = 600
+naval_npc_y = 500
+naval_npc = NavalNPC(naval_npc_x, naval_npc_y, interaction_radius=40)
+
 # Initialize Interaction Manager
 interaction_manager = InteractionManager()
 interaction_manager.add_interactable(wizard)
+interaction_manager.add_interactable(naval_npc)
 # Add other NPCs to interaction_manager here as they are created
 
 # These definitions are now part of the Wizard's get_interaction_properties
@@ -126,6 +133,7 @@ interaction_manager.add_interactable(wizard)
 all_sprites = pygame.sprite.Group()
 all_sprites.add(player)
 all_sprites.add(wizard) # Add wizard to the sprite group
+all_sprites.add(naval_npc) # Add naval NPC to the sprite group
 # Add other NPCs to all_sprites here
 
 
@@ -195,11 +203,10 @@ while running:
                                 wizard,                 
                                 all_sprites,            
                                 interaction_manager,    
-                                update_map_dimensions_from_manager
-                            )
+                                update_map_dimensions_from_manager                            )
                             wizard.reset_interaction_state() # Reset for next time on main map
                             print("Teleported to Wizard's House.")
-
+                    
                     elif eligible_interactable.id == "wizard_house_stay_query_circle":
                         print(f"E pressed. Starting conversation with Wizard.")
                         # Start conversation with the wizard
@@ -208,6 +215,12 @@ while running:
                         player_can_move = False  # Disable player movement during chat
                         typing_active = False
                         chat_manager.start_conversation()
+                    
+                    elif eligible_interactable.id.startswith("naval_npc"):
+                        print(f"E pressed. Talking to Naval Officer.")
+                        # Request new AI response from the Naval NPC
+                        naval_npc.request_new_response()
+                        # Popup remains active, typing will be triggered by naval_npc.new_message_to_type
                 elif event.key == pygame.K_q: 
                     print(f"Q pressed with eligible interactable: {eligible_interactable.id if eligible_interactable else 'None'}.")
                     if eligible_interactable:
@@ -247,6 +260,14 @@ while running:
                             typing_active = False # Stop typing
                             # Potentially reset wizard_in_house state if it has one
                             # wizard_in_house.reset_interaction_state() # If applicable
+                        
+                        elif eligible_interactable.id.startswith("naval_npc"):
+                            print(f"Q pressed. Moving on from Naval Officer.")
+                            interaction_manager.set_interacted_flag(eligible_interactable.id, True)
+                            show_interaction_popup = False
+                            player_can_move = True
+                            typing_active = False # Stop typing
+                            naval_npc.reset_interaction_state() # Reset naval NPC's state
 
     # Handle chat state changes - restore player movement when chat ends
     if not chat_manager.is_active and not player_can_move and not show_interaction_popup:
@@ -264,8 +285,7 @@ while running:
         if not show_interaction_popup: 
             show_interaction_popup = True
             player_can_move = False 
-            print(f"Player entered {eligible_interactable.id}'s interaction circle. Popup shown.")
-            # Check if we need to start typing a new message immediately
+            print(f"Player entered {eligible_interactable.id}'s interaction circle. Popup shown.")            # Check if we need to start typing a new message immediately
             if eligible_interactable.id == "wizard" and wizard.new_message_to_type:
                 props = wizard.get_interaction_properties() # Get current message
                 text_to_type_full = props['message']
@@ -274,6 +294,14 @@ while running:
                 typing_last_char_time = current_time_ticks 
                 typing_active = True
                 wizard.new_message_to_type = False # Consume the flag
+            elif eligible_interactable.id.startswith("naval_npc") and naval_npc.new_message_to_type:
+                props = naval_npc.get_interaction_properties() # Get current message
+                text_to_type_full = props['message']
+                typed_text_display = ""
+                typing_char_index = 0
+                typing_last_char_time = current_time_ticks 
+                typing_active = True
+                naval_npc.new_message_to_type = False # Consume the flag
 
     elif show_interaction_popup: # No eligible interactable, but popup is shown
         show_interaction_popup = False
@@ -290,8 +318,7 @@ while running:
                 typing_last_char_time = current_time_ticks
             else:
                 typing_active = False # Typing finished
-    
-    # Check if wizard has a new message to type (e.g., after thinking)
+      # Check if wizard has a new message to type (e.g., after thinking)
     if show_interaction_popup and eligible_interactable and eligible_interactable.id == "wizard":
         if wizard.new_message_to_type and not typing_active: # Start typing if new message and not already typing
             props = wizard.get_interaction_properties()
@@ -301,12 +328,26 @@ while running:
             typing_last_char_time = current_time_ticks
             typing_active = True
             wizard.new_message_to_type = False
-
-
-    game_camera.update(player, map_width, map_height) 
+    
+    # Check if naval_npc has a new message to type (e.g., after thinking)
+    if show_interaction_popup and eligible_interactable and eligible_interactable.id.startswith("naval_npc"):
+        if naval_npc.new_message_to_type and not typing_active: # Start typing if new message and not already typing
+            props = naval_npc.get_interaction_properties()
+            text_to_type_full = props['message']
+            typed_text_display = ""
+            typing_char_index = 0
+            typing_last_char_time = current_time_ticks
+            typing_active = True
+            naval_npc.new_message_to_type = False
+    
+    game_camera.update(player, map_width, map_height)
+    
+    # Set update parameters for NavalNPC before calling all_sprites.update()
+    naval_npc.set_update_parameters(map_width, map_height, map_manager.can_move)
+    
     # Update all sprites (including the wizard's own update logic)
     # Sprites list is managed by map_manager for map-specific NPCs
-    all_sprites.update() 
+    all_sprites.update()
 
     # Fill the screen with white
     screen.fill((173, 216, 230))
@@ -318,18 +359,23 @@ while running:
     current_building_layout = map_manager.get_current_building_layout()
     current_decoration_layout = map_manager.get_current_decoration_layout() # ADDED
     current_tile_size = map_manager.get_current_tile_size()
-    tilemap.draw_map(screen, game_camera, current_map_layout, current_building_layout, current_decoration_layout, current_tile_size) # MODIFIED
-
-    # Draw all sprites (adjusting for camera)
+    tilemap.draw_map(screen, game_camera, current_map_layout, current_building_layout, current_decoration_layout, current_tile_size) # MODIFIED    # Draw all sprites (adjusting for camera)
     # Ensure all_sprites only contains sprites relevant to the current map
     for sprite in all_sprites:
         screen.blit(sprite.image, game_camera.apply(sprite))
+    
+    # Draw NavalNPC speech bubbles
+    naval_npc.draw_speech_bubble(screen, game_camera)
 
     # Draw interaction circles for all interactables that haven't been interacted with
     # and are on the current map (implicitly handled if interaction_manager only has current map's interactables)
     for interactable_obj in interaction_manager.get_all_interactables():
         if not interaction_manager.get_interacted_flag(interactable_obj.id):
             props = interactable_obj.get_interaction_properties()
+
+            if props['id'].startswith("naval_npc"):
+                continue
+
             circle_center_vec = pygame.math.Vector2(props['center'])
             # Apply camera offset to the circle's static world position for drawing
             circle_draw_center_x_on_screen = circle_center_vec.x + game_camera.camera.x
