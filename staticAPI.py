@@ -46,6 +46,19 @@ def get_philosophy_question():
         print(f"Error generating joke: {e}")
         return "Could not fetch a joke."
 
+def get_AI_question():
+    """Generates and returns a short joke about AI."""
+    try:
+        response2 = client.models.generate_content(
+            #model="gemini-2.0-flash",
+            model="gemma-3-4b-it",
+            contents="You are a philosophically inclined AI professor who thinks a very hard about the future and AI. Ask me one fundamental question about AI, AI specifics (such as MoE, transformers, attention mechanism, something about how compute works, etc.), humanity or a combination. Keep the language simple. The question should be short and easy to understand.",
+        )
+        return response2.text
+    except Exception as e:
+        print(f"Error generating joke: {e}")
+        return "Could not fetch a joke."
+
 def list_available_models():
     """Prints the names of available models."""
     print("Listing all available models:")
@@ -59,11 +72,11 @@ def list_available_models():
 
 # This block runs only when apiTest.py is executed directly (not when imported)
 if __name__ == "__main__":
-    #list_available_models()
+    list_available_models()
     
-    print("\nFetching Deep question:")
-    question = get_philosophy_question()
-    print(question)
+    #print("\nFetching Deep question:")
+    #question = get_philosophy_question()
+    #print(question)
 
 
     #print("\nText from custom input:")

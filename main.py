@@ -8,6 +8,7 @@ import tilemap # Import the new tilemap module
 from wizard import Wizard # Import the Wizard class
 from interaction_manager import InteractionManager # Import InteractionManager
 from mapManager import MapManager # Import MapManager
+from chat_manager import ChatManager # Import ChatManager
 import wizardHouse # Ensure wizardHouse is imported to be available for MapManager
 
 
@@ -47,6 +48,9 @@ player_can_move = True
 screen_width = 1700
 screen_height = 900
 screen = pygame.display.set_mode((screen_width, screen_height))
+
+# Initialize ChatManager
+chat_manager = ChatManager(screen_width, screen_height)
 
 # Define map dimensions (larger than the screen)
 # Use tilemap dimensions
@@ -135,11 +139,17 @@ while running:
     current_time_ticks = pygame.time.get_ticks() # Get current time once per frame for typing
 
     for event in pygame.event.get():
+        # Handle chat events first - if chat is active, it should have priority
+        if chat_manager.handle_event(event):
+            continue  # Skip other event processing if chat handled the event
+        
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE: 
-                running = False
+                # If chat is active, ESC will end it (handled above), otherwise quit the game
+                if not chat_manager.is_active:
+                    running = False
             elif event.key == pygame.K_u: # Check for 'U' key press
                 print("'U' key pressed. Attempting to reload and refresh map data...")
                 try:
@@ -185,18 +195,19 @@ while running:
                                 wizard,                 
                                 all_sprites,            
                                 interaction_manager,    
-                                update_map_dimensions_from_manager 
+                                update_map_dimensions_from_manager
                             )
                             wizard.reset_interaction_state() # Reset for next time on main map
                             print("Teleported to Wizard's House.")
 
                     elif eligible_interactable.id == "wizard_house_stay_query_circle":
-                        print(f"E pressed. Staying in Wizard's House.")
-                        # Logic to stay in the wizard's house (e.g., close popup, allow movement)
+                        print(f"E pressed. Starting conversation with Wizard.")
+                        # Start conversation with the wizard
                         interaction_manager.set_interacted_flag(eligible_interactable.id, True) 
                         show_interaction_popup = False
-                        player_can_move = True
+                        player_can_move = False  # Disable player movement during chat
                         typing_active = False
+                        chat_manager.start_conversation()
                 elif event.key == pygame.K_q: 
                     print(f"Q pressed with eligible interactable: {eligible_interactable.id if eligible_interactable else 'None'}.")
                     if eligible_interactable:
@@ -236,12 +247,14 @@ while running:
                             typing_active = False # Stop typing
                             # Potentially reset wizard_in_house state if it has one
                             # wizard_in_house.reset_interaction_state() # If applicable
-    
-    if not running: 
-        break
+
+    # Handle chat state changes - restore player movement when chat ends
+    if not chat_manager.is_active and not player_can_move and not show_interaction_popup:
+        player_can_move = True
+        print("Chat ended, restoring player movement")
 
     keys = pygame.key.get_pressed()
-    if player_can_move:
+    if player_can_move and not chat_manager.is_active:  # Also check chat is not active
         player.update_position(keys, map_width, map_height, last_direction_keydown_event, map_manager.can_move)
 
     interaction_manager.update(player.rect.center)
@@ -400,8 +413,10 @@ while running:
             for text_surface in second_rendered_lines:
                 text_rect = text_surface.get_rect(centerx=second_popup_bg_rect.centerx, top=current_y_second)
                 screen.blit(text_surface, text_rect)
-                current_y_second += line_height
-        # --- END: Draw second popup ---
+                current_y_second += line_height        # --- END: Draw second popup ---
+    
+    # Draw chat interface if active
+    chat_manager.draw(screen)
     
     # Update the display
     pygame.display.flip()
