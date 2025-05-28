@@ -65,7 +65,7 @@ def handle_continuous_chat():
         except Exception as e:
             print(f"An error occurred during message sending: {e}")
 
-print("\\nWelcome! I'm your friendly AI tour guide. Let's chat!")
+print("\nLet's chat!")
 
 if __name__ == "__main__":
 

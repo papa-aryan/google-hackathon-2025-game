@@ -196,7 +196,7 @@ while running:
                         interaction_manager.set_interacted_flag(eligible_interactable.id, True) 
                         show_interaction_popup = False
                         player_can_move = True
-                        typing_active = False # Stop typing
+                        typing_active = False
                 elif event.key == pygame.K_q: 
                     print(f"Q pressed with eligible interactable: {eligible_interactable.id if eligible_interactable else 'None'}.")
                     if eligible_interactable:

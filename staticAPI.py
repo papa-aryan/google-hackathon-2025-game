@@ -8,12 +8,12 @@ google_api_key = os.getenv("GOOGLE_API_KEY")
 client = genai.Client(api_key = google_api_key)
 
 
-reponse2 = client.models.generate_content(
-    model="gemini-1.5-flash",
-    contents="Explain how AI works in a few words",
-    )
-print("Response from the model:")
-print(reponse2.text)
+#reponse2 = client.models.generate_content(
+#    model="gemini-1.5-flash",
+#    contents="Explain how AI works in a few words",
+#    )
+#print("Response from the model:")
+#print(reponse2.text)
 
 
 
@@ -36,7 +36,8 @@ def get_philosophy_question():
     """Generates and returns a short joke about Google."""
     try:
         response1 = client.models.generate_content(
-            model="gemini-2.5-flash-preview-05-20",
+            model="gemini-2.0-flash",
+            #model="gemini-2.5-flash-preview-05-20",
             contents="You are a philosophically inclined AI enthusiast who thinks a very hard about the future and AI. Ask me one deep question that will make me think about the future, AI, humanity or a combination. Keep the language simple. The question should be short and persuasive.",
             #contents="You're a world-class comedian. You're currently standing on a stage at a comedy show in front of 2500 people. Tell the audience a short joke about Google.",
 )

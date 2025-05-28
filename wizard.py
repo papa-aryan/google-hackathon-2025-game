@@ -1,6 +1,6 @@
 import pygame
 from entity import Entity
-from apiTest import get_philosophy_question
+from staticAPI import get_philosophy_question
 import threading 
 import textwrap 
 
@@ -35,7 +35,7 @@ class Wizard(Entity):
         self.interaction_center_y = self.rect.bottom + interaction_offset_y # Offset below the wizard
         self.static_interaction_center = (self.interaction_center_x, self.interaction_center_y)
         
-        self.prompt_talk = "Press E to Hear a Joke. Press Q to Move On."
+        self.prompt_talk = "Press E to Speak to The Wizard. Press Q to Walk Away."
         self.prompt_visit_or_leave = "Press E to Visit The Wizard. Press Q to Move On."
         
         self.interaction_message = self.prompt_talk # Initial message
@@ -48,7 +48,6 @@ class Wizard(Entity):
             self.is_fetching_joke = True
             self.interaction_message = "Wizard is thinking..."
             self.new_message_to_type = True # Signal to type "thinking..."
-            # Ensure apiTest.get_google_joke is thread-safe or doesn't interact with Pygame directly
             self.joke_fetch_thread = threading.Thread(target=self._fetch_and_update_joke)
             self.joke_fetch_thread.daemon = True # Allow main program to exit even if thread is running
             self.joke_fetch_thread.start()
