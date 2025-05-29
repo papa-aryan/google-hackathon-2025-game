@@ -147,15 +147,37 @@ def init_collectibles():
 def update_collectibles():
     """Update collectible timers and respawn items"""
     global BUILDING_MAP
-    for (row, col), data in collectibles.items():
+    import random
+
+    for (row, col), data in list(collectibles.items()):  # Use list() to avoid modification during iteration
         if data["collected"]:
             data["timer"] += 1
-            if data["timer"] >= 480:  # Respawn after 600 frames
-                data["collected"] = False
-                data["timer"] = 0
-                if row < len(BUILDING_MAP) and col < len(BUILDING_MAP[row]):
-                    BUILDING_MAP[row][col] = data["original_tile"]
-                    print(f"Collectible respawned at ({row}, {col})")
+            if data["timer"] >= 480:  # Respawn after 480 frames
+                # Remove the old collectible entry
+                del collectibles[(row, col)]
+                
+                # Find all current walkable positions (excluding occupied collectible spots)
+                walkable_positions = []
+                occupied_positions = set(collectibles.keys())  # Positions with active collectibles
+                
+                for row_idx in range(len(COLLISION_MAP)):
+                    for col_idx in range(len(COLLISION_MAP[row_idx])):
+                        if (COLLISION_MAP[row_idx][col_idx] == 0 and  # Walkable tile
+                            (row_idx, col_idx) not in occupied_positions and  # Not occupied by collectible
+                            BUILDING_MAP[row_idx][col_idx] == EMPTY_TILE_ID):  # Not occupied by building
+                            walkable_positions.append((row_idx, col_idx))
+                # Spawn at new random location if available
+                if walkable_positions:
+                    new_row, new_col = random.choice(walkable_positions)
+                    BUILDING_MAP[new_row][new_col] = 933  # Place collectible tile
+                    collectibles[(new_row, new_col)] = {
+                        "timer": 0, 
+                        "collected": False, 
+                        "original_tile": 933
+                    }
+                    print(f"Collectible respawned at new location ({new_row}, {new_col}) - was at ({row}, {col})")
+                else:
+                    print("Warning: No available positions for collectible respawn")
 
 def collect_item(world_x, world_y, tile_size):
     """Check if player collected an item at given world position"""
