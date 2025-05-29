@@ -27,15 +27,15 @@ class NavalNPC(Entity):
         self.speed = 1  # Slower than player
         self.movement_direction = random.choice(['up', 'down', 'left', 'right', 'idle'])
         self.movement_timer = 0
-        self.movement_duration = random.randint(60, 180)  # Frames to move in current direction
+        self.movement_duration = random.randint(60, 300)  # Frames to move in current direction
         self.idle_timer = 0
-        self.idle_duration = random.randint(30, 120)  # Frames to stay idle
+        self.idle_duration = random.randint(60, 180)  # Frames to stay idle
         
         # Speaking properties
         self.speaking_timer = 0
-        self.speaking_interval = random.randint(300, 600)  # Frames between speeches (5-10 seconds at 60fps)
+        self.speaking_interval = random.randint(400, 800) 
         self.is_speaking = False
-        self.speech_duration = 180  # How long speech bubble stays (3 seconds)
+        self.speech_duration = 180 
         self.current_speech = ""
         self.speech_bubble_offset_y = -40  # Above the NPC
         
@@ -60,18 +60,21 @@ class NavalNPC(Entity):
         if hasattr(self, '_stored_map_width') and hasattr(self, '_stored_map_height') and hasattr(self, '_stored_collision_func'):
             self.update_ai_behavior(self._stored_map_width, self._stored_map_height, self._stored_collision_func)
     
-    def set_update_parameters(self, map_width, map_height, collision_check_func):
+    def set_update_parameters(self, map_width, map_height, collision_check_func, player_sprite=None):
         """Store parameters for the basic update method"""
         self._stored_map_width = map_width
         self._stored_map_height = map_height
         self._stored_collision_func = collision_check_func
+        self._stored_player_sprite = player_sprite 
+
     
     def update_ai_behavior(self, map_width, map_height, collision_check_func):
         """Update NPC movement, speaking, and other behaviors"""
         current_time = pygame.time.get_ticks()
         
         # Update movement
-        self._update_movement(map_width, map_height, collision_check_func)
+        self._update_movement(map_width, map_height, collision_check_func,
+                              getattr(self, '_stored_player_sprite', None))
         
         # Update speaking behavior
         self._update_speaking()
@@ -81,7 +84,7 @@ class NavalNPC(Entity):
         self.interaction_center_y = self.rect.bottom - 40
         self.static_interaction_center = (self.interaction_center_x, self.interaction_center_y)
 
-    def _update_movement(self, map_width, map_height, collision_check_func):
+    def _update_movement(self, map_width, map_height, collision_check_func, player_sprite=None):
         """Handle AI movement logic"""
         if self.movement_direction == 'idle':
             self.idle_timer += 1
@@ -117,6 +120,14 @@ class NavalNPC(Entity):
             future_y = self.rect.y + dy
             
             can_move = True
+
+            if player_sprite:
+                temp_rect = self.rect.copy()
+                temp_rect.x = future_x
+                temp_rect.y = future_y
+                if temp_rect.colliderect(player_sprite.rect):
+                    can_move = False
+
             if collision_check_func:
                 # Check collision at key points (similar to player collision detection)
                 npc_w = self.rect.width
@@ -171,7 +182,7 @@ class NavalNPC(Entity):
         if not self.is_speaking and not self.is_fetching_speech and self.speaking_timer >= self.speaking_interval:
             self._start_ai_speech()
             self.speaking_timer = 0
-            self.speaking_interval = random.randint(300, 600)  # New random interval
+            self.speaking_interval = random.randint(400, 800) 
         
         # Handle speech duration
         if self.is_speaking:
@@ -179,7 +190,7 @@ class NavalNPC(Entity):
             if self.speech_duration <= 0:
                 self.is_speaking = False
                 self.current_speech = ""
-                self.speech_duration = 180  # Reset for next speech
+                self.speech_duration = 300  # Reset for next speech
 
     def _start_ai_speech(self):
         """Start fetching AI-generated speech in a separate thread"""

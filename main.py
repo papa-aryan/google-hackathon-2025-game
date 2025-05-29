@@ -343,7 +343,7 @@ while running:
     game_camera.update(player, map_width, map_height)
     
     # Set update parameters for NavalNPC before calling all_sprites.update()
-    naval_npc.set_update_parameters(map_width, map_height, map_manager.can_move)
+    naval_npc.set_update_parameters(map_width, map_height, map_manager.can_move, player)
     
     # Update all sprites (including the wizard's own update logic)
     # Sprites list is managed by map_manager for map-specific NPCs

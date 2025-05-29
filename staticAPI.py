@@ -52,7 +52,7 @@ def get_AI_question():
         response2 = client.models.generate_content(
             #model="gemini-2.0-flash",
             model="gemma-3-4b-it",
-            contents="You are a philosophically inclined AI professor who thinks a very hard about the future and AI. Ask me one fundamental question about AI, AI specifics (such as MoE, transformers, attention mechanism, something about how compute works, etc.), humanity or a combination. Keep the language simple. The question should be short and easy to understand.",
+            contents="You are a philosophically inclined AI professor who thinks a very hard about the future and AI. Ask me one fundamental question about AI, AI specifics (such as MoE, transformers, attention mechanism, something about how compute works, etc.), humanity or a combination. Keep the language simple. The question should be very short and easy to understand. 25 words max",
         )
         return response2.text
     except Exception as e:
