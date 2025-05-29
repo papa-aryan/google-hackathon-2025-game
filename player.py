@@ -16,21 +16,25 @@ class Player(Entity):
         self.speed = 5
 
     def update_position(self, keys, map_width, map_height, last_direction_keydown_event=None, collision_check_func=None):
+    # Check for speed boost
+        speed_multiplier = 2.0 if keys[pygame.K_LSHIFT] else 1.0
+        current_speed = int(self.speed * speed_multiplier)
+
         dx, dy = 0, 0
         moved_by_tap = False
 
         if last_direction_keydown_event and keys[last_direction_keydown_event]:
             if last_direction_keydown_event in [pygame.K_UP, pygame.K_w]:
-                dy = -self.speed
+                dy = -current_speed
                 moved_by_tap = True
             elif last_direction_keydown_event in [pygame.K_DOWN, pygame.K_s]:
-                dy = self.speed
+                dy = current_speed
                 moved_by_tap = True
             elif last_direction_keydown_event in [pygame.K_LEFT, pygame.K_a]:
-                dx = -self.speed
+                dx = -current_speed
                 moved_by_tap = True
             elif last_direction_keydown_event in [pygame.K_RIGHT, pygame.K_d]:
-                dx = self.speed
+                dx = current_speed
                 moved_by_tap = True
         
         if moved_by_tap:
@@ -40,15 +44,15 @@ class Player(Entity):
                 dy = 0
         else:
             if keys[pygame.K_UP] or keys[pygame.K_w]:
-                dy = -self.speed
+                dy = -current_speed
             elif keys[pygame.K_DOWN] or keys[pygame.K_s]:
-                dy = self.speed
+                dy = current_speed
 
             if dy == 0:
                 if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-                    dx = -self.speed
+                    dx = -current_speed
                 elif keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-                    dx = self.speed
+                    dx = current_speed
             else:
                 dx = 0
         
