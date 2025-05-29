@@ -76,7 +76,19 @@ _original_building_rows = [
     [727,728,-1, -1, -1, -1,682,684,683],
     [727,728,-1,933,933, -1,476,477,478],
     [-1, -1, -1, -1, -1, -1,521,522,523, -1, -1,961,962],
-    [-1, -1, -1, -1, -1, -1,566, -1,568, -1, -1, -1, -1, -1, -1, -1, -1, -1, 933]
+    [-1, -1, -1, -1, -1, -1,566, -1,568, -1, -1, -1, -1, -1, -1, -1, -1, -1, 933],
+    [-1],
+    [-1],
+    [-1],  
+    [-1],
+    [-1, -1, -1, -1, -1, -1, 933],
+    [-1],
+    [-1],
+    [-1],
+    [-1],
+    [-1],
+    [-1],
+    [-1, -1, -1, -1, -1, 933],
 ]
 
 
@@ -121,7 +133,7 @@ def update_collectibles():
     for (row, col), data in collectibles.items():
         if data["collected"]:
             data["timer"] += 1
-            if data["timer"] >= 600:  # Respawn after 600 frames
+            if data["timer"] >= 480:  # Respawn after 600 frames
                 data["collected"] = False
                 data["timer"] = 0
                 if row < len(BUILDING_MAP) and col < len(BUILDING_MAP[row]):

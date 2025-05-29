@@ -32,6 +32,10 @@ pygame.font.init()
 # Font for interaction popup
 interaction_font = pygame.font.Font(None, 72) # Added font
 
+# Point tracker
+player_points = 0
+points_font = pygame.font.Font(None, 36)
+
 # Typewriter effect state
 typing_active = False
 text_to_type_full = ""
@@ -77,6 +81,15 @@ def update_map_dimensions_from_manager(new_width, new_height):
     map_width = new_width
     map_height = new_height
     print(f"Global map dimensions updated by MapManager: {map_width}x{map_height}")
+
+def draw_point_tracker(screen):
+    """Draw the point tracker at the top left of the screen"""
+    points_text = f"Wisdom Points: {player_points}"
+    points_surface = points_font.render(points_text, True, (255, 255, 255))  # White text
+    # Add a semi-transparent background for better visibility
+    bg_rect = pygame.Rect(5, 5, points_surface.get_width() + 10, points_surface.get_height() + 10)
+    pygame.draw.rect(screen, (0, 0, 0, 128), bg_rect)  # Semi-transparent black background
+    screen.blit(points_surface, (10, 10))
 
 
 # Initial map dimensions are set by MapManager based on the starting map ("main_map")
@@ -275,11 +288,11 @@ while running:
     keys = pygame.key.get_pressed()
     if player_can_move and not chat_manager.is_active:  # Also check chat is not active
         player.update_position(keys, map_width, map_height, last_direction_keydown_event, map_manager.can_move)
-        
-        # Check for item collection after player movement
+          # Check for item collection after player movement
         if map_manager.current_map_data["name"] == "main_map":  # Only on main map
             if tilemap.collect_item(player.rect.centerx, player.rect.centery, map_manager.get_current_tile_size()):
-                print("Collected an item! Points added.")
+                player_points += 1
+                print(f"Item collected! Points: {player_points}")
 
     # Update collectibles system (respawn timers)
     if map_manager.current_map_data["name"] == "main_map":  # Only on main map
@@ -467,9 +480,11 @@ while running:
                 text_rect = text_surface.get_rect(centerx=second_popup_bg_rect.centerx, top=current_y_second)
                 screen.blit(text_surface, text_rect)
                 current_y_second += line_height        # --- END: Draw second popup ---
-    
-    # Draw chat interface if active
+      # Draw chat interface if active
     chat_manager.draw(screen)
+    
+    # Draw point tracker
+    draw_point_tracker(screen)
     
     # Update the display
     pygame.display.flip()

@@ -24,7 +24,7 @@ class NavalNPC(Entity):
         self.rect.topleft = (x, y)
         
         # Movement properties
-        self.speed = 1  # Slower than player
+        self.speed = 2  # Slower than player
         self.movement_direction = random.choice(['up', 'down', 'left', 'right', 'idle'])
         self.movement_timer = 0
         self.movement_duration = random.randint(60, 600)  # Frames to move in current direction
