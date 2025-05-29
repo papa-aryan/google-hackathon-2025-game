@@ -27,15 +27,15 @@ class NavalNPC(Entity):
         self.speed = 1  # Slower than player
         self.movement_direction = random.choice(['up', 'down', 'left', 'right', 'idle'])
         self.movement_timer = 0
-        self.movement_duration = random.randint(60, 300)  # Frames to move in current direction
+        self.movement_duration = random.randint(60, 600)  # Frames to move in current direction
         self.idle_timer = 0
-        self.idle_duration = random.randint(60, 180)  # Frames to stay idle
+        self.idle_duration = random.randint(60, 300)  # Frames to stay idle
         
         # Speaking properties
         self.speaking_timer = 0
         self.speaking_interval = random.randint(400, 800) 
         self.is_speaking = False
-        self.speech_duration = 180 
+        self.speech_duration = 300 
         self.current_speech = ""
         self.speech_bubble_offset_y = -40  # Above the NPC
         

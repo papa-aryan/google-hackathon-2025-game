@@ -69,14 +69,14 @@ for r_idx in range(_new_map_height_tiles):
 
 # Define the building layer data
 _original_building_rows = [
-    [-1, -1, -1, -1, -1, -1, -1, 622],
-    [-1, -1, -1, -1, -1, -1, 666, 667, 668],
-    [-1, -1, -1, -1, -1, -1, 711, 712, 713],
-    [682, 683, -1, -1, -1, -1, 756, 757, 758],
-    [727, 728, -1, -1, -1, -1, 682, 684, 683],
-    [727, 728, -1, -1, -1, -1, 476, 477, 478],
-    [-1, -1, -1, -1, -1, -1, 521, 522, 523, -1, -1, 961, 962],
-    [-1, -1, -1, -1, -1, -1, 566, -1, 568, -1]
+    [-1, -1, -1, -1, -1, -1, -1,622],
+    [-1, -1, -1, -1, -1, -1,666,667,668],
+    [-1, -1, -1, -1, -1, -1,711,712,713],
+    [682,683,-1, -1, -1, -1,756,757,758],
+    [727,728,-1, -1, -1, -1,682,684,683],
+    [727,728,-1,933,933, -1,476,477,478],
+    [-1, -1, -1, -1, -1, -1,521,522,523, -1, -1,961,962],
+    [-1, -1, -1, -1, -1, -1,566, -1,568, -1, -1, -1, -1, -1, -1, -1, -1, -1, 933]
 ]
 
 
@@ -98,6 +98,50 @@ for r_idx in range(_new_map_height_tiles):
     BUILDING_MAP.append(new_row)
 
 
+# Collectibles system - track collectible positions and respawn timers
+collectibles = {}  # {(row, col): {"timer": 0, "collected": False, "original_tile": 933}}
+
+def init_collectibles():
+    """Initialize collectibles from BUILDING_MAP after it's created"""
+    global collectibles
+    collectibles = {}
+    for row_idx, row in enumerate(BUILDING_MAP):
+        for col_idx, tile_id in enumerate(row):
+            if tile_id == 933:  # Your collectible tile ID
+                collectibles[(row_idx, col_idx)] = {
+                    "timer": 0, 
+                    "collected": False, 
+                    "original_tile": 933
+                }
+    print(f"Initialized {len(collectibles)} collectible items at positions: {list(collectibles.keys())}")
+
+def update_collectibles():
+    """Update collectible timers and respawn items"""
+    global BUILDING_MAP
+    for (row, col), data in collectibles.items():
+        if data["collected"]:
+            data["timer"] += 1
+            if data["timer"] >= 600:  # Respawn after 600 frames
+                data["collected"] = False
+                data["timer"] = 0
+                if row < len(BUILDING_MAP) and col < len(BUILDING_MAP[row]):
+                    BUILDING_MAP[row][col] = data["original_tile"]
+                    print(f"Collectible respawned at ({row}, {col})")
+
+def collect_item(world_x, world_y, tile_size):
+    """Check if player collected an item at given world position"""
+    tile_x = world_x // tile_size
+    tile_y = world_y // tile_size
+    
+    if (tile_y, tile_x) in collectibles and not collectibles[(tile_y, tile_x)]["collected"]:
+        collectibles[(tile_y, tile_x)]["collected"] = True
+        if tile_y < len(BUILDING_MAP) and tile_x < len(BUILDING_MAP[tile_y]):
+            BUILDING_MAP[tile_y][tile_x] = EMPTY_TILE_ID  # Remove from map
+        print(f"Item collected at tile ({tile_y}, {tile_x})")
+        return True  # Item collected
+    return False
+
+
 # Collision map (0 = walkable, 1 = wall)
 # Manually define COLLISION_MAP similar to wizardHouse.py
 # Dimensions should be _new_map_height_tiles (30) x _new_map_width_tiles (30)
@@ -107,8 +151,9 @@ COLLISION_MAP = [
     [1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1],
+    [1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
@@ -126,7 +171,6 @@ COLLISION_MAP = [
     [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
@@ -219,6 +263,10 @@ def get_main_map_data():
     # Player start position for the main map (example: tile 10,10)
     # Ensure these are within the bounds of MAP and COLLISION_MAP
     start_x_tile, start_y_tile = 1, 1 # Example starting tile
+    
+    # Initialize collectibles when map data is requested
+    init_collectibles()
+    
     return {
         "name": "main_map", # Added name for consistency
         "map_layout": MAP,

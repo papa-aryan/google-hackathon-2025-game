@@ -267,9 +267,7 @@ while running:
                             show_interaction_popup = False
                             player_can_move = True
                             typing_active = False # Stop typing
-                            naval_npc.reset_interaction_state() # Reset naval NPC's state
-
-    # Handle chat state changes - restore player movement when chat ends
+                            naval_npc.reset_interaction_state() # Reset naval NPC's state    # Handle chat state changes - restore player movement when chat ends
     if not chat_manager.is_active and not player_can_move and not show_interaction_popup:
         player_can_move = True
         print("Chat ended, restoring player movement")
@@ -277,6 +275,15 @@ while running:
     keys = pygame.key.get_pressed()
     if player_can_move and not chat_manager.is_active:  # Also check chat is not active
         player.update_position(keys, map_width, map_height, last_direction_keydown_event, map_manager.can_move)
+        
+        # Check for item collection after player movement
+        if map_manager.current_map_data["name"] == "main_map":  # Only on main map
+            if tilemap.collect_item(player.rect.centerx, player.rect.centery, map_manager.get_current_tile_size()):
+                print("Collected an item! Points added.")
+
+    # Update collectibles system (respawn timers)
+    if map_manager.current_map_data["name"] == "main_map":  # Only on main map
+        tilemap.update_collectibles()
 
     interaction_manager.update(player.rect.center)
     
