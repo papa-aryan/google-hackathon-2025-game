@@ -11,6 +11,7 @@ from interaction_manager import InteractionManager # Import InteractionManager
 from mapManager import MapManager # Import MapManager
 from chat_manager import ChatManager # Import ChatManager
 import wizardHouse # Ensure wizardHouse is imported to be available for MapManager
+import random
 
 
 try:
@@ -123,8 +124,8 @@ wizard_y = 388
 wizard = Wizard(wizard_x, wizard_y, interaction_radius=30, interaction_offset_y=28)
 
 # Create Naval NPC instance at a different location
-naval_npc_x = 600
-naval_npc_y = 500
+naval_npc_x = random.randint(600, 1000)
+naval_npc_y = random.randint(500, 850)
 naval_npc = NavalNPC(naval_npc_x, naval_npc_y, interaction_radius=40)
 
 # Initialize Interaction Manager

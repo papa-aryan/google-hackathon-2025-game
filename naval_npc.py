@@ -45,11 +45,11 @@ class NavalNPC(Entity):
         self.interaction_center_y = self.rect.bottom
         self.static_interaction_center = (self.interaction_center_x, self.interaction_center_y)
         
-        self.prompt_talk = "Press E to Talk to the Naval Officer. Press Q to Walk Away."
+        self.prompt_talk = "Press E to Talk to Naval. Press Q to Walk Away."
         self.interaction_message = self.prompt_talk
         self.is_fetching_response = False
         self.response_fetch_thread = None
-        self.new_message_to_type = False        # AI speaking state
+        self.new_message_to_type = False # AI speaking state
         self.is_fetching_speech = False
         self.speech_fetch_thread = None
     
@@ -227,7 +227,7 @@ class NavalNPC(Entity):
         """Request a new AI response for interaction"""
         if not self.is_fetching_response:
             self.is_fetching_response = True
-            self.interaction_message = "Naval Officer is thinking..."
+            self.interaction_message = "Naval is thinking..."
             self.new_message_to_type = True
             self.response_fetch_thread = threading.Thread(target=self._fetch_and_update_response)
             self.response_fetch_thread.daemon = True
@@ -241,12 +241,12 @@ class NavalNPC(Entity):
             
             if response and response != "Could not fetch a joke.":
                 wrapped_response = textwrap.fill(response, width=WRAP_WIDTH)
-                self.interaction_message = f"Naval Officer says:\n\"{wrapped_response}\""
+                self.interaction_message = f"Naval says:\n\"{wrapped_response}\""
             else:
-                self.interaction_message = "Naval Officer seems lost in thought. Please try again later."
+                self.interaction_message = "Naval seems lost in thought. Please try again later."
         except Exception as e:
             print(f"Error fetching AI response for Naval NPC: {e}")
-            self.interaction_message = "Naval Officer is having trouble speaking right now."
+            self.interaction_message = "Naval is having trouble speaking right now."
         finally:
             self.is_fetching_response = False
             self.new_message_to_type = True
