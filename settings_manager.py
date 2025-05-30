@@ -150,7 +150,9 @@ class SettingsManager:
         password = self.password_text.strip()
         
         if self.input_mode == "signup":
-            success = self.db_handler.signup_user(username, password)
+            # Get current points from main to preserve them during signup
+            current_points = self._get_current_game_points()
+            success = self.db_handler.signup_user(username, password, current_points)
             if success:
                 print(f"Successfully signed up user: {username}")
                 self.is_signed_in = True
@@ -165,11 +167,41 @@ class SettingsManager:
                 print(f"Successfully signed in user: {username}")
                 self.is_signed_in = True
                 self.current_username = username
+                # Load user's saved points
+                self._load_user_points()
                 self._close_input_fields()
             else:
-                self._show_error_message("Sign in failed. Invalid username or password.")
+                self._show_error_message("Sign in failed. Check your username and password.")
+
+    def _get_current_game_points(self):
+        """Get current points from the game. This should be overridden or set by main."""
+        return getattr(self, '_current_points', 0)
+
+    def set_current_points(self, points):
+        """Set the current points value for signup purposes."""
+        self._current_points = points
+
+    def _load_user_points(self):
+        """Load user's points from database and update the game."""
+        if self.current_username and self.db_handler:
+            points = self.db_handler.get_user_points(self.current_username)
+            if hasattr(self, '_points_callback'):
+                self._points_callback(points)
+                print(f"Loaded {points} points for user {self.current_username}")
+            else:
+                print("Warning: Points callback not set")
         else:
-            self._show_error_message("Invalid input mode.")
+            print("Cannot load points: missing username or database connection")
+
+    def set_points_callback(self, callback):
+        """Set callback function to update points in main game."""
+        self._points_callback = callback
+
+    def save_user_points(self, points):
+        """Save current points to database."""
+        if self.current_username and self.db_handler:
+            return self.db_handler.save_user_points(self.current_username, points)
+        return False
         
     def _close_input_fields(self):
         """Close input fields and reset state"""
@@ -214,7 +246,8 @@ class SettingsManager:
     def _handle_action_button_click(self, button_index):
         """Handle clicks on action buttons in the popup"""
         if self.show_input_fields:
-            # When input fields are showing, button_index 0 is the submit button            if button_index == 0:  # Submit button
+            # When input fields are showing, button_index 0 is the submit button            
+            if button_index == 0:  # Submit button
                 self._handle_input_submission()
         elif self.is_signed_in:
             if button_index == 0:  # Sign Out
@@ -223,8 +256,13 @@ class SettingsManager:
                 self.current_username = None  # Clear username
                 print("User signed out successfully")
             elif button_index == 1:  # Save
-                print("Save clicked") 
-                # TODO: Implement save logic
+                print("Save clicked")
+                # Save current points to database
+                current_points = self._get_current_game_points()
+                if self.save_user_points(current_points):
+                    print(f"Successfully saved {current_points} points to database.")
+                else:
+                    print("Failed to save points to database.")
             # Close popup after action
             self.is_popup_active = False
         else:

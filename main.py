@@ -62,6 +62,14 @@ chat_manager = ChatManager(screen_width, screen_height)
 # Initialize SettingsManager
 settings_manager = SettingsManager(screen_width, screen_height)
 
+# Set up points callback for settings manager
+def update_player_points(new_points):
+    global player_points
+    player_points = new_points
+    print(f"Player points updated to: {player_points}")
+
+settings_manager.set_points_callback(update_player_points)
+
 # Define map dimensions (larger than the screen)
 # Use tilemap dimensions
 # Make map_width and map_height global so they can be updated
@@ -306,6 +314,9 @@ while running:
     mouse_pos = pygame.mouse.get_pos()
     mouse_clicked = pygame.mouse.get_pressed()[0]
     settings_manager.update_mouse_state(mouse_pos, mouse_clicked)
+
+    # Update settings manager with current points
+    settings_manager.set_current_points(player_points)
     
     if player_can_move and not chat_manager.is_active:  # Also check chat is not active
         player.update_position(keys, map_width, map_height, last_direction_keydown_event, map_manager.can_move)

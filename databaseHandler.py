@@ -111,7 +111,7 @@ class FirestoreHandler:
             print(f"Error adding new field: {e}")
             return False
         
-    def signup_user(self, username, password): 
+    def signup_user(self, username, password, initial_points=0): 
         """Adds a new user to the 'users' collection."""
         if not self.db:
             print("Firestore client not available. Cannot sign up user.")
@@ -119,16 +119,17 @@ class FirestoreHandler:
         try:
             # Using username as document ID for simplicity, ensure usernames are unique.
             # Alternatively, use auto-generated IDs and store username as a field.
-            user_ref = self.db.collection('users').document(username) # Changed: uses self.db
+            user_ref = self.db.collection('users').document(username)
             # Check if user already exists
             if user_ref.get().exists:
                 print(f"Username '{username}' already exists.")
                 return False
             user_ref.set({
                 'username': username,
-                'password': password  # WARNING: Storing plain text password
+                'password': password,  # WARNING: Storing plain text password
+                'points': initial_points
             })
-            print(f"User '{username}' signed up successfully.")
+            print(f"User '{username}' signed up successfully with {initial_points} points.")
             return True
         except Exception as e:
             print(f"Error signing up user: {e}")
@@ -140,7 +141,7 @@ class FirestoreHandler:
             print("Firestore client not available. Cannot log in user.")
             return False
         try:
-            user_ref = self.db.collection('users').document(username) # Changed: uses self.db
+            user_ref = self.db.collection('users').document(username)
             doc = user_ref.get()
             if doc.exists:
                 user_data = doc.to_dict()
@@ -156,6 +157,42 @@ class FirestoreHandler:
                 return False
         except Exception as e:
             print(f"Error logging in user: {e}")
+            return False
+        
+    def get_user_points(self, username):
+        """Gets the points for a specific user."""
+        if not self.db:
+            print("Firestore client not available. Cannot get user points.")
+            return 0
+        try:
+            user_ref = self.db.collection('users').document(username)
+            doc = user_ref.get()
+            if doc.exists:
+                user_data = doc.to_dict()
+                points = user_data.get('points', 0)  # Default to 0 if no points field
+                print(f"User '{username}' has {points} points.")
+                return points
+            else:
+                print(f"Username '{username}' not found.")
+                return 0
+        except Exception as e:
+            print(f"Error getting user points: {e}")
+            return 0
+        
+    def save_user_points(self, username, points):
+        """Saves the points for a specific user."""
+        if not self.db:
+            print("Firestore client not available. Cannot save user points.")
+            return False
+        try:
+            user_ref = self.db.collection('users').document(username)
+            user_ref.update({
+                'points': points
+            })
+            print(f"Successfully saved {points} points for user '{username}'.")
+            return True
+        except Exception as e:
+            print(f"Error saving user points: {e}")
             return False
 
 if __name__ == "__main__":
