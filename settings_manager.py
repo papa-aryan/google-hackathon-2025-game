@@ -46,30 +46,56 @@ class SettingsManager:
         # Mouse state
         self.mouse_pos = (0, 0)
         self.is_mouse_clicked = False
-        
-        # Action button rects (will be calculated in draw_popup)
+          # Action button rects (will be calculated in draw_popup)
         self.action_button_rects = []
         
         # Input field state
         self.show_input_fields = False
-        self.input_mode = None  # "signin" or "signup"        self.username_text = ""
+        self.input_mode = None  # "signin" or "signup"
+        self.username_text = ""
         self.password_text = ""
         self.active_field = None  # "username", "password", or None
         self.username_rect = None
         self.password_rect = None
         
-        # Initialize database handler
+        # Status display properties
+        self.current_username = None  # Store current signed-in username
+        self.status_font = pygame.font.Font(None, 28)
+        self.status_bg_color_signed_in = (40, 80, 40, 180)  # Faint green with transparency
+        self.status_bg_color_signed_out = (80, 40, 40, 180)  # Faint red with transparency
+        self.status_text_color = (255, 255, 255)
+        
+        # Error message display properties
+        self.error_message = None
+        self.error_message_start_time = 0
+        self.error_display_duration = 4000  # 4 seconds in milliseconds
+        self.error_font = pygame.font.Font(None, 24)
+        self.error_bg_color = (80, 40, 40, 200)  # Faint red with transparency
+        self.error_text_color = (255, 255, 255)
+          # Initialize database handler
         try:
             self.db_handler = FirestoreHandler(SERVICE_ACCOUNT_KEY_PATH)
             print("Database handler initialized successfully")
         except Exception as e:
             print(f"Failed to initialize database handler: {e}")
             self.db_handler = None
-        
+    
     def update_mouse_state(self, mouse_pos, mouse_clicked):
         """Update mouse position and click state"""
         self.mouse_pos = mouse_pos
         self.is_mouse_clicked = mouse_clicked
+        
+    def _show_error_message(self, message):
+        """Display an error message for a limited time"""
+        self.error_message = message
+        self.error_message_start_time = pygame.time.get_ticks()
+        
+    def _update_error_message(self):
+        """Update error message display timer"""
+        if self.error_message:
+            current_time = pygame.time.get_ticks()
+            if current_time - self.error_message_start_time > self.error_display_duration:
+                self.error_message = None
         
     def handle_key_input(self, event):
         """Handle keyboard input for text fields"""
@@ -107,18 +133,17 @@ class SettingsManager:
                         self.username_text += event.unicode
                     elif self.active_field == "password" and len(self.password_text) < 20:
                         self.password_text += event.unicode
-                    return True
-                    
+                    return True                    
         return False
-        
+    
     def _handle_input_submission(self):
         """Handle form submission when Enter is pressed"""
         if not self.username_text.strip() or not self.password_text.strip():
-            print("Please fill in both username and password fields.")
+            self._show_error_message("Please fill in both username and password fields.")
             return
             
         if not self.db_handler:
-            print("Database not available. Cannot authenticate.")
+            self._show_error_message("Database not available. Cannot authenticate.")
             return
             
         username = self.username_text.strip()
@@ -129,20 +154,22 @@ class SettingsManager:
             if success:
                 print(f"Successfully signed up user: {username}")
                 self.is_signed_in = True
+                self.current_username = username
                 self._close_input_fields()
             else:
-                print("Sign up failed. Username may already exist.")
+                self._show_error_message("Sign up failed. Username may already exist.")
                 
         elif self.input_mode == "signin":
             success = self.db_handler.login_user(username, password)
             if success:
                 print(f"Successfully signed in user: {username}")
                 self.is_signed_in = True
+                self.current_username = username
                 self._close_input_fields()
             else:
-                print("Sign in failed. Invalid username or password.")
+                self._show_error_message("Sign in failed. Invalid username or password.")
         else:
-            print("Invalid input mode.")
+            self._show_error_message("Invalid input mode.")
         
     def _close_input_fields(self):
         """Close input fields and reset state"""
@@ -166,7 +193,8 @@ class SettingsManager:
                 self.is_popup_active = False
                 self._close_input_fields()
                 return True
-                  # Check input field clicks if they're showing
+                
+            # Check input field clicks if they're showing
             if self.show_input_fields:
                 if self.username_rect and self.username_rect.collidepoint(mouse_pos):
                     self.active_field = "username"
@@ -186,13 +214,13 @@ class SettingsManager:
     def _handle_action_button_click(self, button_index):
         """Handle clicks on action buttons in the popup"""
         if self.show_input_fields:
-            # When input fields are showing, button_index 0 is the submit button
-            if button_index == 0:  # Submit button
+            # When input fields are showing, button_index 0 is the submit button            if button_index == 0:  # Submit button
                 self._handle_input_submission()
         elif self.is_signed_in:
             if button_index == 0:  # Sign Out
                 print("Sign Out clicked")
                 self.is_signed_in = False  # Sign out the user
+                self.current_username = None  # Clear username
                 print("User signed out successfully")
             elif button_index == 1:  # Save
                 print("Save clicked") 
@@ -221,11 +249,11 @@ class SettingsManager:
         """Draw the settings button in the top right corner"""
         # Choose color based on hover state
         button_color = self.button_hover_color if self._is_button_hovered(self.button_rect) else self.button_color
-        
-        # Draw button with rounded corners effect (multiple rects with decreasing size)
+          # Draw button with rounded corners effect (multiple rects with decreasing size)
         pygame.draw.rect(screen, button_color, self.button_rect, border_radius=8)
         pygame.draw.rect(screen, self.popup_border_color, self.button_rect, 2, border_radius=8)
-          # Draw button text
+        
+        # Draw button text
         button_text = self.button_font.render("Settings", True, self.button_text_color)
         text_rect = button_text.get_rect(center=self.button_rect.center)
         screen.blit(button_text, text_rect)
@@ -399,16 +427,86 @@ class SettingsManager:
             # Draw button
             pygame.draw.rect(screen, current_color, button_rect, border_radius=6)
             pygame.draw.rect(screen, self.popup_border_color, button_rect, 2, border_radius=6)
-            
-            # Draw button text
+              # Draw button text
             button_text_surface = self.popup_button_font.render(text, True, self.button_text_color)
             text_rect = button_text_surface.get_rect(center=button_rect.center)
             screen.blit(button_text_surface, text_rect)
-        
+    
     def draw(self, screen):
         """Draw both the settings button and popup if active"""
+        # Update error message timer
+        self._update_error_message()
+        
         self.draw_settings_button(screen)
         self.draw_popup(screen)
+        self._draw_status_display(screen)
+        self._draw_error_message(screen)
+        
+    def _draw_status_display(self, screen):
+        """Draw the sign-in status display in the middle of the screen"""
+        if self.is_signed_in and self.current_username:
+            status_text = f"Signed in as: {self.current_username}"
+            bg_color = self.status_bg_color_signed_in
+        else:
+            status_text = "Not signed in"
+            bg_color = self.status_bg_color_signed_out
+        
+        # Render text
+        text_surface = self.status_font.render(status_text, True, self.status_text_color)
+        text_width = text_surface.get_width()
+        text_height = text_surface.get_height()
+        
+        # Position at center-top of screen
+        padding = 15
+        box_width = text_width + padding * 2
+        box_height = text_height + padding
+        box_x = (self.screen_width - box_width) // 2
+        box_y = 50  # Position near top of screen
+        
+        # Create a surface with alpha for transparency
+        status_surface = pygame.Surface((box_width, box_height))
+        status_surface.set_alpha(bg_color[3])  # Set transparency
+        status_surface.fill(bg_color[:3])  # Fill with RGB color
+        
+        # Draw background with border
+        screen.blit(status_surface, (box_x, box_y))
+        pygame.draw.rect(screen, self.popup_border_color, (box_x, box_y, box_width, box_height), 2, border_radius=8)
+        
+        # Draw text
+        text_x = box_x + padding
+        text_y = box_y + padding // 2
+        screen.blit(text_surface, (text_x, text_y))
+        
+    def _draw_error_message(self, screen):
+        """Draw error message below the settings popup if there is one"""
+        if not self.error_message:
+            return
+            
+        # Render error text
+        error_text_surface = self.error_font.render(self.error_message, True, self.error_text_color)
+        text_width = error_text_surface.get_width()
+        text_height = error_text_surface.get_height()
+        
+        # Position below popup area
+        padding = 12
+        box_width = text_width + padding * 2
+        box_height = text_height + padding
+        box_x = (self.screen_width - box_width) // 2
+        box_y = (self.screen_height // 2) + 200  # Below popup area
+        
+        # Create a surface with alpha for transparency
+        error_surface = pygame.Surface((box_width, box_height))
+        error_surface.set_alpha(self.error_bg_color[3])  # Set transparency
+        error_surface.fill(self.error_bg_color[:3])  # Fill with RGB color
+        
+        # Draw background with border
+        screen.blit(error_surface, (box_x, box_y))
+        pygame.draw.rect(screen, self.popup_border_color, (box_x, box_y, box_width, box_height), 2, border_radius=6)
+        
+        # Draw error text
+        text_x = box_x + padding
+        text_y = box_y + padding // 2
+        screen.blit(error_text_surface, (text_x, text_y))
         
     def set_signed_in_state(self, is_signed_in):
         """Update the player's sign-in state"""
