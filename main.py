@@ -190,9 +190,14 @@ while running:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE: 
-                # If chat is active, ESC will end it (handled above), otherwise quit the game
-                if not chat_manager.is_active:
-                    running = False
+                # ESC now opens settings instead of exiting
+                if not settings_manager.is_popup_active:
+                    settings_manager.is_popup_active = True
+                    settings_manager._close_input_fields()
+                else:
+                    settings_manager.is_popup_active = False
+                    settings_manager._close_input_fields()
+
             elif event.key == pygame.K_u: # Check for 'U' key press
                 print("'U' key pressed. Attempting to reload and refresh map data...")
                 try:
@@ -318,7 +323,7 @@ while running:
     # Update settings manager with current points
     settings_manager.set_current_points(player_points)
     
-    if player_can_move and not chat_manager.is_active:  # Also check chat is not active
+    if player_can_move and not chat_manager.is_active and not settings_manager.show_input_fields:
         player.update_position(keys, map_width, map_height, last_direction_keydown_event, map_manager.can_move)
         # Check for item collection after player movement
         if map_manager.current_map_data["name"] == "main_map":  # Only on main map

@@ -66,7 +66,7 @@ class SettingsManager:
         self.status_text_color = (255, 255, 255)
 
         # Save status box properties
-        self.save_status_box_size = 25
+        self.save_status_box_size = 45
         self.save_status_hover_font = pygame.font.Font(None, 28)
 
         
@@ -114,8 +114,9 @@ class SettingsManager:
                 self._handle_input_submission()
                 return True
             elif event.key == pygame.K_ESCAPE:
-                # Escape key pressed - close input fields
+                # ESC now closes input fields AND the entire popup
                 self._close_input_fields()
+                self.is_popup_active = False  # Also close the popup
                 return True
             elif event.key == pygame.K_TAB:
                 # Tab key pressed - switch between fields
@@ -236,12 +237,12 @@ class SettingsManager:
         
         if is_saved:
             return {
-                'color': (40, 80, 40, 150),  # Faint green
+                'color': (60, 150, 60, 220),  # Faint green
                 'hover_text': "Game saved :)"
             }
         else:
             return {
-                'color': (80, 40, 40, 150),  # Faint red
+                'color': (150, 60, 60, 220),  # Faint red
                 'hover_text': "Game unsaved: press Save in settings to save your progress."
             }
 
@@ -380,7 +381,7 @@ class SettingsManager:
             self._draw_action_buttons(screen, current_popup_rect)
             
         # Draw close instruction
-        close_text = "Click outside to close"
+        close_text = "Click ESC or outside of the pop-up to close"
         close_surface = pygame.font.Font(None, 20).render(close_text, True, (150, 150, 150))
         close_rect = close_surface.get_rect(centerx=current_popup_rect.centerx, 
                                           y=current_popup_rect.bottom - 30)
