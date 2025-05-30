@@ -10,6 +10,7 @@ from naval_npc import NavalNPC # Import the Naval NPC class
 from interaction_manager import InteractionManager # Import InteractionManager
 from mapManager import MapManager # Import MapManager
 from chat_manager import ChatManager # Import ChatManager
+from settings_manager import SettingsManager # Import SettingsManager
 import wizardHouse # Ensure wizardHouse is imported to be available for MapManager
 import random
 
@@ -57,6 +58,9 @@ screen = pygame.display.set_mode((screen_width, screen_height))
 
 # Initialize ChatManager
 chat_manager = ChatManager(screen_width, screen_height)
+
+# Initialize SettingsManager
+settings_manager = SettingsManager(screen_width, screen_height)
 
 # Define map dimensions (larger than the screen)
 # Use tilemap dimensions
@@ -160,10 +164,14 @@ last_direction_keydown_event = None # Added to track the last directional key ev
 while running:
     current_time_ticks = pygame.time.get_ticks() # Get current time once per frame for typing
 
-    for event in pygame.event.get():
-        # Handle chat events first - if chat is active, it should have priority
+    for event in pygame.event.get():        # Handle chat events first - if chat is active, it should have priority
         if chat_manager.handle_event(event):
             continue  # Skip other event processing if chat handled the event
+          # Handle settings manager events
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 1:  # Left mouse button
+                if settings_manager.handle_click(event.pos):
+                    continue  # Skip other event processing if settings handled the event
         
         if event.type == pygame.QUIT:
             running = False
@@ -280,18 +288,25 @@ while running:
                             interaction_manager.set_interacted_flag(eligible_interactable.id, True)
                             show_interaction_popup = False
                             player_can_move = True
-                            typing_active = False # Stop typing
-                            naval_npc.reset_interaction_state() # Reset naval NPC's state    # Handle chat state changes - restore player movement when chat ends
+                            typing_active = False # Stop typing                            naval_npc.reset_interaction_state() # Reset naval NPC's state
+    
+    # Handle chat state changes - restore player movement when chat ends
     if not chat_manager.is_active and not player_can_move and not show_interaction_popup:
         player_can_move = True
         print("Chat ended, restoring player movement")
-
+        
     keys = pygame.key.get_pressed()
+    
+    # Update settings manager with current mouse state
+    mouse_pos = pygame.mouse.get_pos()
+    mouse_clicked = pygame.mouse.get_pressed()[0]
+    settings_manager.update_mouse_state(mouse_pos, mouse_clicked)
+    
     if player_can_move and not chat_manager.is_active:  # Also check chat is not active
         player.update_position(keys, map_width, map_height, last_direction_keydown_event, map_manager.can_move)
-          # Check for item collection after player movement
+        # Check for item collection after player movement
         if map_manager.current_map_data["name"] == "main_map":  # Only on main map
-            if tilemap.collect_item(player.rect.centerx, player.rect.centery, map_manager.get_current_tile_size()):
+            if tilemap.collect_item(player.rect.centerx, player.rect.centery+10, map_manager.get_current_tile_size()):
                 player_points += 1
                 print(f"Item collected! Points: {player_points}")
 
@@ -383,6 +398,10 @@ while running:
     tilemap.draw_map(screen, game_camera, current_map_layout, current_building_layout, current_decoration_layout, current_tile_size) # MODIFIED    # Draw all sprites (adjusting for camera)
     # Ensure all_sprites only contains sprites relevant to the current map
     for sprite in all_sprites:
+        if (hasattr(sprite, 'id') and sprite.id.startswith("naval_npc") and 
+            map_manager.current_map_name == "wizard_house"):
+            continue
+
         screen.blit(sprite.image, game_camera.apply(sprite))
     
     # Draw NavalNPC speech bubbles
@@ -480,9 +499,11 @@ while running:
             for text_surface in second_rendered_lines:
                 text_rect = text_surface.get_rect(centerx=second_popup_bg_rect.centerx, top=current_y_second)
                 screen.blit(text_surface, text_rect)
-                current_y_second += line_height        # --- END: Draw second popup ---
-      # Draw chat interface if active
+                current_y_second += line_height        # --- END: Draw second popup ---    # Draw chat interface if active
     chat_manager.draw(screen)
+    
+    # Draw settings interface
+    settings_manager.draw(screen)
     
     # Draw point tracker
     draw_point_tracker(screen)

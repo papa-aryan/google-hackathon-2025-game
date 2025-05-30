@@ -126,6 +126,7 @@ def get_wizard_house_data():
     )
 
     return {
+        "name": "wizard_house",  # ADD THIS LINE
         "map_layout": HOUSE_MAP,
         "building_layout": HOUSE_BUILDING_MAP,
         "collision_layout": HOUSE_COLLISION_MAP,
