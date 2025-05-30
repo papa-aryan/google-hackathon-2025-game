@@ -1,4 +1,5 @@
 import pygame
+from databaseHandler import FirestoreHandler, SERVICE_ACCOUNT_KEY_PATH
 
 class SettingsManager:
     def __init__(self, screen_width, screen_height):
@@ -51,11 +52,19 @@ class SettingsManager:
         
         # Input field state
         self.show_input_fields = False
-        self.input_mode = None  # "signin" or "signup"
-        self.username_text = ""
+        self.input_mode = None  # "signin" or "signup"        self.username_text = ""
         self.password_text = ""
-        self.active_field = None  # "username", "password", or None        self.username_rect = None
+        self.active_field = None  # "username", "password", or None
+        self.username_rect = None
         self.password_rect = None
+        
+        # Initialize database handler
+        try:
+            self.db_handler = FirestoreHandler(SERVICE_ACCOUNT_KEY_PATH)
+            print("Database handler initialized successfully")
+        except Exception as e:
+            print(f"Failed to initialize database handler: {e}")
+            self.db_handler = None
         
     def update_mouse_state(self, mouse_pos, mouse_clicked):
         """Update mouse position and click state"""
@@ -92,8 +101,7 @@ class SettingsManager:
                 elif self.active_field == "password" and self.password_text:
                     self.password_text = self.password_text[:-1]
                 return True
-            else:
-                # Regular character input
+            else:                # Regular character input
                 if event.unicode.isprintable() and len(event.unicode) == 1:
                     if self.active_field == "username" and len(self.username_text) < 20:
                         self.username_text += event.unicode
@@ -109,10 +117,32 @@ class SettingsManager:
             print("Please fill in both username and password fields.")
             return
             
-        print(f"Username: {self.username_text}")
-        print(f"Password: {self.password_text}")
-          # Close input fields after successful submission
-        self._close_input_fields()
+        if not self.db_handler:
+            print("Database not available. Cannot authenticate.")
+            return
+            
+        username = self.username_text.strip()
+        password = self.password_text.strip()
+        
+        if self.input_mode == "signup":
+            success = self.db_handler.signup_user(username, password)
+            if success:
+                print(f"Successfully signed up user: {username}")
+                self.is_signed_in = True
+                self._close_input_fields()
+            else:
+                print("Sign up failed. Username may already exist.")
+                
+        elif self.input_mode == "signin":
+            success = self.db_handler.login_user(username, password)
+            if success:
+                print(f"Successfully signed in user: {username}")
+                self.is_signed_in = True
+                self._close_input_fields()
+            else:
+                print("Sign in failed. Invalid username or password.")
+        else:
+            print("Invalid input mode.")
         
     def _close_input_fields(self):
         """Close input fields and reset state"""
@@ -136,22 +166,23 @@ class SettingsManager:
                 self.is_popup_active = False
                 self._close_input_fields()
                 return True
-                
-            # Check input field clicks if they're showing
+                  # Check input field clicks if they're showing
             if self.show_input_fields:
                 if self.username_rect and self.username_rect.collidepoint(mouse_pos):
                     self.active_field = "username"
                     return True
                 elif self.password_rect and self.password_rect.collidepoint(mouse_pos):
                     self.active_field = "password"
-                    return True            # Check action button clicks
+                    return True
+            
+            # Check action button clicks
             for i, button_rect in enumerate(self.action_button_rects):
                 if button_rect.collidepoint(mouse_pos):
                     self._handle_action_button_click(i)
                     return True
                     
         return False
-        
+    
     def _handle_action_button_click(self, button_index):
         """Handle clicks on action buttons in the popup"""
         if self.show_input_fields:
@@ -161,7 +192,8 @@ class SettingsManager:
         elif self.is_signed_in:
             if button_index == 0:  # Sign Out
                 print("Sign Out clicked")
-                # TODO: Implement sign out logic
+                self.is_signed_in = False  # Sign out the user
+                print("User signed out successfully")
             elif button_index == 1:  # Save
                 print("Save clicked") 
                 # TODO: Implement save logic

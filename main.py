@@ -410,7 +410,8 @@ while running:
         screen.blit(sprite.image, game_camera.apply(sprite))
     
     # Draw NavalNPC speech bubbles
-    naval_npc.draw_speech_bubble(screen, game_camera)
+    if map_manager.current_map_name != "wizard_house":
+        naval_npc.draw_speech_bubble(screen, game_camera)
 
     # Draw interaction circles for all interactables that haven't been interacted with
     # and are on the current map (implicitly handled if interaction_manager only has current map's interactables)
