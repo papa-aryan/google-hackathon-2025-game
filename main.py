@@ -167,11 +167,16 @@ while running:
     for event in pygame.event.get():        # Handle chat events first - if chat is active, it should have priority
         if chat_manager.handle_event(event):
             continue  # Skip other event processing if chat handled the event
-          # Handle settings manager events
+        
+        # Handle settings manager events
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:  # Left mouse button
                 if settings_manager.handle_click(event.pos):
                     continue  # Skip other event processing if settings handled the event
+        
+        # Handle settings manager keyboard input
+        if settings_manager.handle_key_input(event):
+            continue  # Skip other event processing if settings handled the event
         
         if event.type == pygame.QUIT:
             running = False
