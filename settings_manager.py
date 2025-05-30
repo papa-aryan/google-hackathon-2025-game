@@ -24,7 +24,7 @@ class SettingsManager:
         
         # Colors - modern theme
         self.button_color = (40, 40, 50)
-        self.button_hover_color = (60, 60, 70)
+        self.button_hover_color = (70, 70, 70)
         self.button_text_color = (255, 255, 255)
         self.popup_bg_color = (30, 30, 40)
         self.popup_border_color = (100, 100, 120)
@@ -64,6 +64,11 @@ class SettingsManager:
         self.status_bg_color_signed_in = (40, 80, 40, 180)  # Faint green with transparency
         self.status_bg_color_signed_out = (80, 40, 40, 180)  # Faint red with transparency
         self.status_text_color = (255, 255, 255)
+
+        # Save status box properties
+        self.save_status_box_size = 25
+        self.save_status_hover_font = pygame.font.Font(None, 28)
+
         
         # Error message display properties
         self.error_message = None
@@ -72,7 +77,8 @@ class SettingsManager:
         self.error_font = pygame.font.Font(None, 24)
         self.error_bg_color = (80, 40, 40, 200)  # Faint red with transparency
         self.error_text_color = (255, 255, 255)
-          # Initialize database handler
+        
+        # Initialize database handler
         try:
             self.db_handler = FirestoreHandler(SERVICE_ACCOUNT_KEY_PATH)
             print("Database handler initialized successfully")
@@ -157,6 +163,8 @@ class SettingsManager:
                 print(f"Successfully signed up user: {username}")
                 self.is_signed_in = True
                 self.current_username = username
+                # Set saved points to current points for new account
+                self._saved_points = current_points
                 self._close_input_fields()
             else:
                 self._show_error_message("Sign up failed. Username may already exist.")
@@ -187,6 +195,8 @@ class SettingsManager:
             points = self.db_handler.get_user_points(self.current_username)
             if hasattr(self, '_points_callback'):
                 self._points_callback(points)
+                # Set saved points to loaded value
+                self._saved_points = points
                 print(f"Loaded {points} points for user {self.current_username}")
             else:
                 print("Warning: Points callback not set")
@@ -200,9 +210,41 @@ class SettingsManager:
     def save_user_points(self, points):
         """Save current points to database."""
         if self.current_username and self.db_handler:
-            return self.db_handler.save_user_points(self.current_username, points)
+            success = self.db_handler.save_user_points(self.current_username, points)
+            if success:
+                # Update saved points after successful save
+                self._saved_points = points
+            return success
         return False
         
+    def _get_saved_points(self):
+        """Get the last saved points value."""
+        return getattr(self, '_saved_points', 0)
+    
+    def _is_game_saved(self):
+        """Check if the current game state matches the saved state."""
+        if not self.is_signed_in:
+            return True  # Consider unsigned users as "saved"
+        
+        current_points = self._get_current_game_points()
+        saved_points = self._get_saved_points()
+        return current_points == saved_points
+    
+    def _get_save_status_info(self):
+        """Get save status information for display."""
+        is_saved = self._is_game_saved()
+        
+        if is_saved:
+            return {
+                'color': (40, 80, 40, 150),  # Faint green
+                'hover_text': "Game saved :)"
+            }
+        else:
+            return {
+                'color': (80, 40, 40, 150),  # Faint red
+                'hover_text': "Game unsaved: press Save in settings to save your progress."
+            }
+
     def _close_input_fields(self):
         """Close input fields and reset state"""
         self.show_input_fields = False
@@ -514,7 +556,67 @@ class SettingsManager:
         text_x = box_x + padding
         text_y = box_y + padding // 2
         screen.blit(text_surface, (text_x, text_y))
+
+        # Draw save status box to the right of the status display
+        self._draw_save_status_box(screen, box_x + box_width + 10, box_y + (box_height - self.save_status_box_size) // 2)
+
+    def _draw_save_status_box(self, screen, x, y):
+        """Draw the save status indicator box."""
+        if not self.is_signed_in:
+            return  # Don't show save status if not signed in
+            
+        save_info = self._get_save_status_info()
+        box_rect = pygame.Rect(x, y, self.save_status_box_size, self.save_status_box_size)
         
+        # Create surface with alpha for the colored background
+        box_surface = pygame.Surface((self.save_status_box_size, self.save_status_box_size))
+        box_surface.set_alpha(save_info['color'][3])
+        box_surface.fill(save_info['color'][:3])
+        
+        # Draw the box
+        screen.blit(box_surface, (x, y))
+        pygame.draw.rect(screen, self.popup_border_color, box_rect, 2, border_radius=4)
+        
+        # Check if mouse is hovering over the box
+        if box_rect.collidepoint(self.mouse_pos):
+            self._draw_save_status_tooltip(screen, save_info['hover_text'], x, y)
+
+    def _draw_save_status_tooltip(self, screen, text, box_x, box_y):
+        """Draw tooltip for save status box on hover."""
+        # Render tooltip text
+        tooltip_surface = self.save_status_hover_font.render(text, True, self.status_text_color)
+        tooltip_width = tooltip_surface.get_width()
+        tooltip_height = tooltip_surface.get_height()
+        
+        # Position tooltip above the box
+        tooltip_padding = 8
+        tooltip_box_width = tooltip_width + tooltip_padding * 2
+        tooltip_box_height = tooltip_height + tooltip_padding
+        
+        # Calculate tooltip position (above the save status box)
+        tooltip_x = box_x - (tooltip_box_width - self.save_status_box_size) // 2
+        tooltip_y = box_y - tooltip_box_height - 8
+        
+        # Ensure tooltip stays on screen
+        tooltip_x = max(5, min(tooltip_x, self.screen_width - tooltip_box_width - 5))
+        tooltip_y = max(5, tooltip_y)
+        
+        # Create tooltip background
+        tooltip_bg_surface = pygame.Surface((tooltip_box_width, tooltip_box_height))
+        tooltip_bg_surface.set_alpha(200)
+        tooltip_bg_surface.fill((40, 40, 50))
+        
+        # Draw tooltip
+        screen.blit(tooltip_bg_surface, (tooltip_x, tooltip_y))
+        pygame.draw.rect(screen, self.popup_border_color, 
+                        (tooltip_x, tooltip_y, tooltip_box_width, tooltip_box_height), 
+                        1, border_radius=4)
+        
+        # Draw tooltip text
+        text_x = tooltip_x + tooltip_padding
+        text_y = tooltip_y + tooltip_padding // 2
+        screen.blit(tooltip_surface, (text_x, text_y))
+
     def _draw_error_message(self, screen):
         """Draw error message below the settings popup if there is one"""
         if not self.error_message:
