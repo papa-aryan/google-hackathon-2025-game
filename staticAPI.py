@@ -54,9 +54,10 @@ def get_AI_question():
             model="gemma-3-4b-it",
             contents="You are a philosophically inclined AI professor who thinks a very hard about the future and AI. Ask me one fundamental question about AI, AI specifics (such as MoE, transformers, attention mechanism, something about how compute works, etc.), humanity or a combination. Keep the language simple. The question should be very short and easy to understand. 25 words max",
         )
+        print("fetched a question about AI")
         return response2.text
     except Exception as e:
-        print(f"Error generating joke: {e}")
+        print(f"Error generating question: {e}")
         return "Could not fetch a joke."
 
 def list_available_models():

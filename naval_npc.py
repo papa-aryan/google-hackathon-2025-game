@@ -33,7 +33,7 @@ class NavalNPC(Entity):
         
         # Speaking properties
         self.speaking_timer = 0
-        self.speaking_interval = random.randint(400, 800) 
+        self.speaking_interval = random.randint(4000, 8000) 
         self.is_speaking = False
         self.speech_duration = 300 
         self.current_speech = ""
@@ -182,7 +182,7 @@ class NavalNPC(Entity):
         if not self.is_speaking and not self.is_fetching_speech and self.speaking_timer >= self.speaking_interval:
             self._start_ai_speech()
             self.speaking_timer = 0
-            self.speaking_interval = random.randint(400, 800) 
+            self.speaking_interval = random.randint(4000, 8000) 
         
         # Handle speech duration
         if self.is_speaking:

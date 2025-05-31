@@ -13,6 +13,7 @@ from chat_manager import ChatManager # Import ChatManager
 from settings_manager import SettingsManager # Import SettingsManager
 import wizardHouse # Ensure wizardHouse is imported to be available for MapManager
 import random
+from minigameManager import MinigameManager # Import MinigameManager
 
 
 try:
@@ -62,6 +63,9 @@ chat_manager = ChatManager(screen_width, screen_height)
 # Initialize SettingsManager
 settings_manager = SettingsManager(screen_width, screen_height)
 
+# Initialize MinigameManager
+minigame_manager = MinigameManager()
+
 # Set up points callback for settings manager
 def update_player_points(new_points):
     global player_points
@@ -69,6 +73,25 @@ def update_player_points(new_points):
     print(f"Player points updated to: {player_points}")
 
 settings_manager.set_points_callback(update_player_points)
+
+def on_minigame_completion(points):
+    """Callback when player completes minigame"""
+    global player_points
+    player_points += points
+    print(f"Minigame completed! Gained {points} points. Total: {player_points}")
+    # Return to main map
+    map_manager.return_from_minigame(player, wizard, all_sprites, interaction_manager, update_map_dimensions_from_manager)
+
+def on_minigame_death():
+    """Callback when player dies in minigame"""
+    global player_points
+    player_points = max(0, player_points - 1)  # Don't go below 0
+    print(f"Died in minigame! Lost 1 point. Total: {player_points}")
+    # Return to main map
+    map_manager.return_from_minigame(player, wizard, all_sprites, interaction_manager, update_map_dimensions_from_manager)
+
+# Set minigame callbacks
+minigame_manager.set_callbacks(on_minigame_completion, on_minigame_death)
 
 # Define map dimensions (larger than the screen)
 # Use tilemap dimensions
@@ -145,15 +168,6 @@ interaction_manager = InteractionManager()
 interaction_manager.add_interactable(wizard)
 interaction_manager.add_interactable(naval_npc)
 # Add other NPCs to interaction_manager here as they are created
-
-# These definitions are now part of the Wizard's get_interaction_properties
-# interaction_circle_radius = 30
-# interaction_circle_center_x = wizard.rect.centerx
-# interaction_circle_center_y = wizard.rect.bottom + 28
-# static_interaction_circle_center = pygame.math.Vector2(interaction_circle_center_x, interaction_circle_center_y)
-# interaction_circle_color = (135, 206, 250)  # LightSkyBlue
-# interaction_circle_thickness = 3
-
 
 # Sprite group
 all_sprites = pygame.sprite.Group()
@@ -328,14 +342,24 @@ while running:
         # Check for item collection after player movement
         if map_manager.current_map_data["name"] == "main_map":  # Only on main map
             if tilemap.collect_item(player.rect.centerx, player.rect.centery+10, map_manager.get_current_tile_size()):
-                player_points += 1
-                print(f"Item collected! Points: {player_points}")
+                # 50% chance to trigger minigame
+                if random.random() < 0.5:
+                    print("Minigame triggered!")
+                    minigame_manager.start_minigame(1)  # 1 point for this collectible
+                    map_manager.switch_to_minigame(player, all_sprites, interaction_manager, update_map_dimensions_from_manager)
+                else:
+                    # Normal collectible collection
+                    player_points += 1
+                    print(f"Item collected! Points: {player_points}")
 
     # Update collectibles system (respawn timers)
     if map_manager.current_map_data["name"] == "main_map":  # Only on main map
         tilemap.update_collectibles()
 
     interaction_manager.update(player.rect.center)
+
+    if minigame_manager.is_active:
+        minigame_manager.update(player.rect, map_width, map_height)
     
     eligible_interactable = interaction_manager.get_eligible_interactable()
     if eligible_interactable:
@@ -416,7 +440,21 @@ while running:
     current_building_layout = map_manager.get_current_building_layout()
     current_decoration_layout = map_manager.get_current_decoration_layout() # ADDED
     current_tile_size = map_manager.get_current_tile_size()
-    tilemap.draw_map(screen, game_camera, current_map_layout, current_building_layout, current_decoration_layout, current_tile_size) # MODIFIED    # Draw all sprites (adjusting for camera)
+    tilemap.draw_map(screen, game_camera, current_map_layout, current_building_layout, current_decoration_layout, current_tile_size) # Draw all sprites (adjusting for camera)
+    
+    # Draw minigame elements if active
+    if minigame_manager.is_active and map_manager.current_map_name == "minigame_arena":
+        # Draw countdown timer
+        remaining_time = minigame_manager.get_remaining_time()
+        timer_text = f"Survive: {remaining_time}s"
+        timer_surface = pygame.font.Font(None, 60).render(timer_text, True, (255, 0, 0))
+        screen.blit(timer_surface, (screen_width // 2 - timer_surface.get_width() // 2, 70))
+        
+        # Draw hazards
+        for hazard in minigame_manager.hazards:
+            pygame.draw.circle(screen, (255, 0, 0), (int(hazard.x), int(hazard.y)), 20)
+    
+    
     # Ensure all_sprites only contains sprites relevant to the current map
     for sprite in all_sprites:
         if (hasattr(sprite, 'id') and sprite.id.startswith("naval_npc") and 

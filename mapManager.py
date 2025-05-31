@@ -1,14 +1,16 @@
 import pygame
 import tilemap
 import wizardHouse
-from entity import Entity  # Import the Entity class
+from entity import Entity 
+import minigameMap
 
 
 class MapManager:
     def __init__(self):
         self.maps = {
             "main_map": tilemap.get_main_map_data(),
-            "wizard_house": wizardHouse.get_wizard_house_data()
+            "wizard_house": wizardHouse.get_wizard_house_data(),
+            "minigame_arena": minigameMap.get_minigame_map_data() 
         }
         self.current_map_name = "main_map"
         self.current_map_data = self.maps[self.current_map_name]
@@ -98,6 +100,18 @@ class MapManager:
 
         else:
             print(f"Error: Map '{map_name}' not found.")
+
+    def switch_to_minigame(self, player, all_sprites_group, interaction_mgr, update_dimensions_func):
+        """Special method for switching to minigame map"""
+        self.previous_map = self.current_map_name  # Store current map to return to
+        self.switch_map("minigame_arena", player, None, all_sprites_group, interaction_mgr, update_dimensions_func)
+        
+    def return_from_minigame(self, player, wizard_sprite, all_sprites_group, interaction_mgr, update_dimensions_func):
+        """Return from minigame to previous map"""
+        if hasattr(self, 'previous_map'):
+            self.switch_map(self.previous_map, player, wizard_sprite, all_sprites_group, interaction_mgr, update_dimensions_func)
+        else:
+            self.switch_map("main_map", player, wizard_sprite, all_sprites_group, interaction_mgr, update_dimensions_func)
 
     def get_current_map_layout(self):
         return self.current_map_data["map_layout"]
