@@ -151,8 +151,10 @@ class QuizManager:
     def _submit_answer(self):
         """Submit the player's answer for evaluation"""
         if not self.current_question or not self.player_answer.strip():
+            print("DEBUG: No question or empty answer, returning")
             return
         
+        print(f"DEBUG: Submitting answer: '{self.player_answer}'")
         self.evaluating = True
         self.attempt_count += 1
         
@@ -163,16 +165,20 @@ Expected Concepts: '{self.current_question.get('answer_keywords', '')}'
 Player's Answer: '{self.player_answer}'
 Please respond with 'CORRECT' if the answer is sufficiently accurate, otherwise 'INCORRECT'. You can consider synonyms and related concepts. If 'CORRECT', optionally provide a brief reason why. If 'INCORRECT', provide clear hints towards the correct answer."""
         
+        print(f"DEBUG: Sending prompt to AI: {prompt[:200]}...")
+    
         try:
             # Send to continuous chat session
             response = self.chat_session.send_message(prompt)
             ai_response = response.text
-            
+    
+            print(f"DEBUG: AI Response received: '{ai_response}'")
+
             # Process the AI response
             self._process_ai_response(ai_response)
             
         except Exception as e:
-            print(f"Error evaluating answer: {e}")
+            print(f"DEBUG: Error in _submit_answer: {e}")
             self.evaluating = False
             # Show error message to player
             self.quiz_result = "Error occurred during evaluation. Please try again."
@@ -180,22 +186,30 @@ Please respond with 'CORRECT' if the answer is sufficiently accurate, otherwise 
     
     def _process_ai_response(self, ai_response):
         """Process the AI's evaluation response"""
+        print(f"DEBUG: Processing AI response: '{ai_response}'")
         self.evaluating = False
         
-        # Check if answer was correct
-        if "CORRECT" in ai_response.upper():
+        # More precise checking - look for the exact words at the start
+        response_upper = ai_response.upper().strip()
+        
+        # Check if answer was correct (look for CORRECT at the beginning)
+        if response_upper.startswith("CORRECT"):
+            print("DEBUG: AI response starts with 'CORRECT' - awarding points")
             # Award points and close quiz
             self.quiz_result = f"Correct! +{self.pending_collectible_points} point(s)\n\n{ai_response}"
             self._show_result_popup()
             if self.completion_callback:
+                print("DEBUG: Calling completion callback")
                 self.completion_callback(self.pending_collectible_points)
         else:
+            print("DEBUG: AI response does NOT start with 'CORRECT' - marked as incorrect")
             # Answer was incorrect
             if self.attempt_count >= self.max_attempts:
                 # Max attempts reached, no points awarded
                 self.quiz_result = f"Maximum attempts reached. No points awarded.\n\n{ai_response}"
                 self._show_result_popup()
                 if self.failure_callback:
+                    print("DEBUG: Calling failure callback")
                     self.failure_callback()
             else:
                 # Give feedback and allow retry

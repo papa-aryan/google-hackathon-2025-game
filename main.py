@@ -70,6 +70,20 @@ minigame_manager = MinigameManager()
 # Initialize QuizManager
 quiz_manager = QuizManager(screen_width, screen_height)
 
+def on_quiz_completion(points):
+    """Callback when player completes quiz correctly"""
+    global player_points
+    old_points = player_points
+    player_points += points
+    print(f"DEBUG: Quiz completion callback - gained {points} points. {old_points} -> {player_points}")
+
+def on_quiz_failure():
+    """Callback when player fails quiz or cancels"""
+    print("DEBUG: Quiz failure callback - no points awarded")
+
+# Set quiz callbacks
+quiz_manager.set_callbacks(on_quiz_completion, on_quiz_failure)
+
 # Set up points callback for settings manager
 def update_player_points(new_points):
     global player_points
@@ -380,10 +394,10 @@ while running:
             if tilemap.collect_item(player.rect.centerx, player.rect.centery+10, map_manager.get_current_tile_size()):
                 # Random chance to trigger minigame or quiz
                 rand_chance = random.random()
-                if rand_chance < 0.1:  # 30% chance for quiz
+                if rand_chance < 0.8:  # 80% chance for quiz
                     print("Quiz triggered!")
                     quiz_manager.start_quiz(1)  # 1 point for this collectible
-                elif rand_chance < 0.9:  # 30% chance for minigame (0.3 to 0.6)
+                elif rand_chance < 0.9:  # 10% chance for minigame (0.3 to 0.6)
                     print("Minigame triggered!")
                     minigame_manager.start_minigame(1, player.rect)  # 1 point for this collectible
                     map_manager.switch_to_minigame(player, all_sprites, interaction_manager, update_map_dimensions_from_manager)
