@@ -50,30 +50,78 @@ MINIGAME_COLLISION_MAP = [
 
 class MinigameHazard:
     """Represents moving hazards in the minigame"""
-    def __init__(self, x, y, speed=2):
+    def __init__(self, x, y, speed=3.0):
         self.x = x
         self.y = y
-        self.speed = speed
+        self.speed = speed  # This will be updated by MinigameManager
         self.direction = random.choice(['up', 'down', 'left', 'right'])
         self.last_collision_result = False  # For debug display
         
-    def update(self, map_width, map_height):
-        """Update hazard movement"""
+        # Add these lines for spontaneous direction changes
+        self.direction_change_timer = 0
+        self.direction_change_interval = random.randint(60, 300)  # 2-5 seconds at 60fps
+
+    def update_with_collision(self, map_width, map_height, speed):
+        """Update hazard movement with collision detection"""
+        # Store current position
+        old_x, old_y = self.x, self.y
+        
+        # Increment direction change timer
+        self.direction_change_timer += 1
+        
+        # Spontaneous direction change (even when not hitting walls)
+        if self.direction_change_timer >= self.direction_change_interval:
+            self.direction = random.choice(['up', 'down', 'left', 'right'])
+            self.direction_change_timer = 0
+            self.direction_change_interval = random.randint(60, 300)  # Reset interval
+        
+        # Calculate movement
         if self.direction == 'up':
-            self.y -= self.speed
+            new_y = self.y - speed
+            new_x = self.x
         elif self.direction == 'down':
-            self.y += self.speed
+            new_y = self.y + speed
+            new_x = self.x
         elif self.direction == 'left':
-            self.x -= self.speed
+            new_x = self.x - speed
+            new_y = self.y
         elif self.direction == 'right':
-            self.x += self.speed
-            
-        # Bounce off walls
-        if self.x <= 64 or self.x >= map_width - 64:
-            self.direction = 'left' if self.x >= map_width - 64 else 'right'
-        if self.y <= 64 or self.y >= map_height - 64:
-            self.direction = 'up' if self.y >= map_height - 64 else 'down'
-            
+            new_x = self.x + speed
+            new_y = self.y
+        
+        # Check collision with collision map
+        if self._can_move_to(new_x, new_y):
+            self.x = new_x
+            self.y = new_y
+        else:
+            # Bounce off wall by changing direction AND reset timer
+            self._bounce_off_wall()
+            self.direction_change_timer = 0  # Reset timer when bouncing
+            self.direction_change_interval = random.randint(60, 180)  # Shorter interval after bounce
+
+    def _can_move_to(self, x, y):
+        """Check if hazard can move to given position using collision map"""
+        # Convert world coordinates to tile coordinates
+        tile_x = int(x // TILE_GAME_SIZE)
+        tile_y = int(y // TILE_GAME_SIZE)
+        
+        # Check bounds
+        if tile_y < 0 or tile_y >= len(MINIGAME_COLLISION_MAP) or tile_x < 0 or tile_x >= len(MINIGAME_COLLISION_MAP[0]):
+            return False
+        
+        # Check if tile is walkable (0 = walkable, 1 = wall)
+        return MINIGAME_COLLISION_MAP[tile_y][tile_x] == 0
+    
+    def _bounce_off_wall(self):
+        """Change direction when hitting a wall"""
+        if self.direction == 'up':
+            self.direction = 'down'
+        elif self.direction == 'down':
+            self.direction = 'up'
+        elif self.direction == 'left':
+            self.direction = 'right'
+        elif self.direction == 'right':
+            self.direction = 'left'
         
     def check_player_collision(self, player_rect):
         """Check if hazard hits player"""

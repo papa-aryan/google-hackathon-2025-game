@@ -350,7 +350,7 @@ while running:
                 # 50% chance to trigger minigame
                 if random.random() < 0.9:
                     print("Minigame triggered!")
-                    minigame_manager.start_minigame(1)  # 1 point for this collectible
+                    minigame_manager.start_minigame(1, player.rect)  # 1 point for this collectible
                     map_manager.switch_to_minigame(player, all_sprites, interaction_manager, update_map_dimensions_from_manager)
                 else:
                     # Normal collectible collection
@@ -469,7 +469,10 @@ while running:
             
         # Draw debug collision areas
         minigame_manager.draw_debug_info(screen, player.rect, game_camera)
-
+        
+        # Add this line to draw speed popup
+        minigame_manager.draw_speed_popup(screen)
+    
     # Draw sprites - conditionally disable NPCs during minigame
     for sprite in all_sprites:
         # Skip NPCs during minigame, but always draw the player
