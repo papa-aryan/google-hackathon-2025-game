@@ -213,6 +213,10 @@ while running:
                     settings_manager.is_popup_active = False
                     settings_manager._close_input_fields()
 
+            elif event.key == pygame.K_F1:  # F1 to toggle debug
+                if minigame_manager.is_active:
+                    minigame_manager.toggle_debug_mode()
+
             elif event.key == pygame.K_u: # Check for 'U' key press
                 print("'U' key pressed. Attempting to reload and refresh map data...")
                 try:
@@ -344,7 +348,7 @@ while running:
         if map_manager.current_map_data["name"] == "main_map":  # Only on main map
             if tilemap.collect_item(player.rect.centerx, player.rect.centery+10, map_manager.get_current_tile_size()):
                 # 50% chance to trigger minigame
-                if random.random() < 0.5:
+                if random.random() < 0.9:
                     print("Minigame triggered!")
                     minigame_manager.start_minigame(1)  # 1 point for this collectible
                     map_manager.switch_to_minigame(player, all_sprites, interaction_manager, update_map_dimensions_from_manager)
@@ -460,7 +464,12 @@ while running:
         
         # Draw hazards
         for hazard in minigame_manager.hazards:
-            pygame.draw.circle(screen, (255, 0, 0), (int(hazard.x), int(hazard.y)), 20)    
+            hazard_screen_pos = game_camera.apply_point((hazard.x, hazard.y))
+            pygame.draw.circle(screen, (255, 0, 0), hazard_screen_pos, 20)
+            
+        # Draw debug collision areas
+        minigame_manager.draw_debug_info(screen, player.rect, game_camera)
+
     # Draw sprites - conditionally disable NPCs during minigame
     for sprite in all_sprites:
         # Skip NPCs during minigame, but always draw the player

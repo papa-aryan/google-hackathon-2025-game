@@ -8,6 +8,19 @@ class Camera:
 
     def apply(self, entity):
         return entity.rect.move(self.camera.topleft)
+    
+    def apply_rect(self, rect):
+        """Apply camera offset to a rect and return new rect for screen drawing"""
+        return pygame.Rect(
+            rect.x + self.camera.x,
+            rect.y + self.camera.y,
+            rect.width,
+            rect.height
+        )
+
+    def apply_point(self, point):
+        """Apply camera offset to a point (x, y) and return screen coordinates"""
+        return (point[0] + self.camera.x, point[1] + self.camera.y)
 
     def update(self, target, map_width, map_height):
 
