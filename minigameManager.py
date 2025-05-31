@@ -183,7 +183,7 @@ class MinigameManager:
         min_distance = 200  # Minimum distance from player
         
         attempts = 0
-        while len(hazards) < 6 and attempts < 100:  # Start with 6 hazards, max 100 attempts
+        while len(hazards) < 7 and attempts < 100:  # Start with 6 hazards, max 100 attempts
             # Random position in world coordinates
             x = random.randint(100, 1400)
             y = random.randint(100, 700)

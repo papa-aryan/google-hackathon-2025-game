@@ -118,13 +118,21 @@ def init_collectibles():
     global collectibles
     collectibles = {}
 
+    # Get player starting position from map data
+    start_x_tile, start_y_tile = 13, 14  # Use the same values as entry_point_tile
+    exclusion_radius = 4  # 3 tile radius around player spawn
+    
     # Find all walkable positions (COLLISION_MAP = 0)
     walkable_positions = []
     for row_idx in range(len(COLLISION_MAP)):
         for col_idx in range(len(COLLISION_MAP[row_idx])):
             if COLLISION_MAP[row_idx][col_idx] == 0:  # Walkable tile
-                walkable_positions.append((row_idx, col_idx))
-
+                # Calculate distance from player spawn point
+                distance = ((row_idx - start_y_tile) ** 2 + (col_idx - start_x_tile) ** 2) ** 0.5
+                
+                # Only add if outside exclusion radius
+                if distance > exclusion_radius:
+                    walkable_positions.append((row_idx, col_idx))
 
     # Randomly select 5 positions for coins
     import random
@@ -140,9 +148,9 @@ def init_collectibles():
                 "original_tile": 933
             }
         
-        print(f"Initialized {len(collectibles)} collectible coins at random walkable positions: {list(collectibles.keys())}")
+        print(f"Initialized {len(collectibles)} collectible coins avoiding {exclusion_radius}-tile radius around player spawn ({start_y_tile}, {start_x_tile})")
     else:
-        print(f"Warning: Not enough walkable positions found. Only {len(walkable_positions)} available.")
+        print(f"Warning: Not enough valid positions found. Only {len(walkable_positions)} available outside spawn area.")
 
 def update_collectibles():
     """Update collectible timers and respawn items"""
@@ -313,7 +321,7 @@ def get_main_map_data():
     # This function provides the data structure for the main map
     # Player start position for the main map (example: tile 10,10)
     # Ensure these are within the bounds of MAP and COLLISION_MAP
-    start_x_tile, start_y_tile = 1, 1 # Example starting tile
+    start_x_tile, start_y_tile = 13, 14 # Example starting tile
     
     # Initialize collectibles when map data is requested
     init_collectibles()
