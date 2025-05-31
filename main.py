@@ -388,7 +388,7 @@ while running:
     # Update settings manager with current points
     settings_manager.set_current_points(player_points)
     
-    if player_can_move and not chat_manager.is_active and not settings_manager.show_input_fields:
+    if player_can_move and not chat_manager.is_active and not settings_manager.show_input_fields and not quiz_manager.is_active:
         player.update_position(keys, map_width, map_height, last_direction_keydown_event, map_manager.can_move)        # Check for item collection after player movement
         if map_manager.current_map_data["name"] == "main_map":  # Only on main map
             if tilemap.collect_item(player.rect.centerx, player.rect.centery+10, map_manager.get_current_tile_size()):

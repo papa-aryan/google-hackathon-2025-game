@@ -17,7 +17,7 @@ class QuizManager:
         self.pending_collectible_points = 0
         self.show_result_popup = False
         self.result_popup_start_time = 0
-        self.result_popup_duration = 4000  # 4 seconds
+        self.result_popup_duration = 10000  # 10 seconds
         self.attempt_count = 0
         self.max_attempts = 3
           # Initialize database handler
@@ -110,7 +110,9 @@ class QuizManager:
         try:
             # Get a random question ID (1-30)
             #question_id = str(random.randint(1, 30))
-            question_id = "1"
+            #question_id = "1"
+            question_id = str(random.randint(1, 2))
+            
 
             # Read the question document
             question_doc = self.db_handler.read_document('ai_questions', question_id)
@@ -159,11 +161,11 @@ class QuizManager:
         self.attempt_count += 1
         
         # Create evaluation prompt
-        prompt = f"""Evaluate if the player's answer is correct for the given question. Use the answer_keywords as well as your knowledge as an AI to evaluate the answer.
+        prompt = f"""Evaluate if the player's answer is correct for the given question. Use the expected keywords, as well as your knowledge as an AI, to evaluate the answer.
 Question: '{self.current_question.get('question_text', '')}'
 Expected Concepts: '{self.current_question.get('answer_keywords', '')}'
 Player's Answer: '{self.player_answer}'
-Please respond with 'CORRECT' if the answer is sufficiently accurate, otherwise 'INCORRECT'. You can consider synonyms and related concepts. If 'CORRECT', optionally provide a brief reason why. If 'INCORRECT', provide clear hints towards the correct answer."""
+Please respond with 'CORRECT' if the answer is sufficiently accurate, otherwise 'INCORRECT'. You can consider synonyms and related concepts. If 'CORRECT', optionally follow up a brief reason why. If 'INCORRECT', follow up with clear hints towards the correct answer, but do not reveal the full answer."""
         
         print(f"DEBUG: Sending prompt to AI: {prompt[:200]}...")
     
@@ -412,18 +414,25 @@ Please respond with 'CORRECT' if the answer is sufficiently accurate, otherwise 
         surface.blit(title_surface, (title_x, y_offset))
         y_offset += title_surface.get_height() + 20
         
-        # Result text with wrapping
-        wrapped_lines = self._wrap_text(self.quiz_result, self.question_font, self.popup_width - 40)
+        # Split text by newlines first, then wrap each paragraph
+        paragraphs = self.quiz_result.split('\n')
         
-        for line in wrapped_lines:
-            if line.strip():  # Skip empty lines
-                line_surface = self.question_font.render(line, True, self.text_color)
-                surface.blit(line_surface, (20, y_offset))
-                y_offset += line_surface.get_height() + 5
+        for paragraph in paragraphs:
+            if paragraph.strip():  # Skip empty paragraphs
+                # Wrap each paragraph individually
+                wrapped_lines = self._wrap_text(paragraph, self.question_font, self.popup_width - 40)
+                
+                for line in wrapped_lines:
+                    line_surface = self.question_font.render(line, True, self.text_color)
+                    surface.blit(line_surface, (20, y_offset))
+                    y_offset += line_surface.get_height() + 2
+            else:
+                # Add spacing for empty lines (like \n\n)
+                y_offset += self.question_font.get_height() // 2
         
         # Countdown or continue instruction
         remaining_time = (self.result_popup_duration - 
-                         (pygame.time.get_ticks() - self.result_popup_start_time)) / 1000
+                        (pygame.time.get_ticks() - self.result_popup_start_time)) / 1000
         
         if remaining_time > 0:
             if "Try Again" in title:
