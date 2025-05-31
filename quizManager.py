@@ -16,8 +16,6 @@ class QuizManager:
         self.quiz_result = None
         self.pending_collectible_points = 0
         self.show_result_popup = False
-        self.result_popup_start_time = 0
-        self.result_popup_duration = 10000  # 10 seconds
         self.attempt_count = 0
         self.max_attempts = 3
           # Initialize database handler
@@ -128,9 +126,35 @@ class QuizManager:
     
     def handle_event(self, event):
         """Handle pygame events for the quiz interface"""
-        if not self.is_active or self.evaluating or self.show_result_popup:
+        if not self.is_active:
             return False
         
+        # Handle result popup events (Enter to continue like timeout)
+        if self.show_result_popup:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RETURN:
+                    # Do EXACTLY what the timeout does
+                    self.show_result_popup = False
+                    
+                    # Close quiz if it was completed or failed
+                    if (self.quiz_result and
+                        ("Correct!" in self.quiz_result or 
+                        "Maximum attempts reached" in self.quiz_result)):
+                        success = self.quiz_result and "Correct!" in self.quiz_result
+                        self._close_quiz(bool(success))
+                    else:
+                        # Clear answer for next attempt (retry)
+                        self.player_answer = ""
+                    return True
+                elif event.key == pygame.K_ESCAPE:
+                    # Escape always closes quiz
+                    self._close_quiz(False)
+                    return True
+            return True  # Consume all events during result popup
+            
+        if self.evaluating:
+            return False
+            
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 self._close_quiz(False)  # Close without success
@@ -223,26 +247,11 @@ Please respond with 'CORRECT' if the answer is sufficiently accurate, otherwise 
     def _show_result_popup(self):
         """Show the result popup with AI feedback"""
         self.show_result_popup = True
-        self.result_popup_start_time = pygame.time.get_ticks()
     
     def update(self):
         """Update quiz state"""
         if not self.is_active:
             return        # Handle result popup timeout
-        if self.show_result_popup:
-            current_time = pygame.time.get_ticks()
-            if current_time - self.result_popup_start_time >= self.result_popup_duration:
-                self.show_result_popup = False
-                
-                # Close quiz if it was completed or failed
-                if (self.quiz_result and
-                    ("Correct!" in self.quiz_result or 
-                     "Maximum attempts reached" in self.quiz_result)):
-                    success = self.quiz_result and "Correct!" in self.quiz_result
-                    self._close_quiz(bool(success))
-                else:
-                    # Clear answer for next attempt
-                    self.player_answer = ""
     
     def _close_quiz(self, success=False):
         """Close the quiz"""
@@ -430,20 +439,15 @@ Please respond with 'CORRECT' if the answer is sufficiently accurate, otherwise 
                 # Add spacing for empty lines (like \n\n)
                 y_offset += self.question_font.get_height() // 2
         
-        # Countdown or continue instruction
-        remaining_time = (self.result_popup_duration - 
-                        (pygame.time.get_ticks() - self.result_popup_start_time)) / 1000
-        
-        if remaining_time > 0:
-            if "Try Again" in title:
-                continue_text = f"Popup closes in {remaining_time:.1f}s - You can try again!"
-            else:
-                continue_text = f"Closing in {remaining_time:.1f}s"
-                
-            continue_surface = self.input_font.render(continue_text, True, (150, 150, 150))
-            continue_x = (self.popup_width - continue_surface.get_width()) // 2
-            surface.blit(continue_surface, (continue_x, self.popup_height - 40))
-    
+        # Show "Press Enter to continue" instead of countdown
+        if "Try Again" in title:
+            continue_text = "Press Enter to try again!"
+        else:
+            continue_text = "Press Enter to continue"
+            
+        continue_surface = self.input_font.render(continue_text, True, (150, 150, 150))
+        continue_x = (self.popup_width - continue_surface.get_width()) // 2
+        surface.blit(continue_surface, (continue_x, self.popup_height - 40))    
     def _wrap_text(self, text, font, max_width):
         """Wrap text to fit within max_width"""
         words = text.split(' ')
