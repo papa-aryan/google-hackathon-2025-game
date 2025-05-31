@@ -13,6 +13,10 @@ class MinigameManager:
         self.player_death_callback = None
         self.completion_callback = None
         
+    def should_disable_main_game_elements(self):
+        """Returns True if main game elements should be disabled (during minigame)"""
+        return self.is_active
+        
     def start_minigame(self, collectible_points=1):
         """Start the 60-second survival minigame"""
         self.is_active = True

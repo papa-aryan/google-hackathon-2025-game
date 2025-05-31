@@ -187,23 +187,24 @@ while running:
     current_time_ticks = pygame.time.get_ticks() # Get current time once per frame for typing
 
     for event in pygame.event.get():        # Handle chat events first - if chat is active, it should have priority
-        if chat_manager.handle_event(event):
-            continue  # Skip other event processing if chat handled the event
+        if not minigame_manager.should_disable_main_game_elements():
+            if chat_manager.handle_event(event):
+                continue  # Skip other event processing if chat handled the event
         
         # Handle settings manager events
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:  # Left mouse button
-                if settings_manager.handle_click(event.pos):
-                    continue  # Skip other event processing if settings handled the event
-        
-        # Handle settings manager keyboard input
-        if settings_manager.handle_key_input(event):
-            continue  # Skip other event processing if settings handled the event
+        if not minigame_manager.should_disable_main_game_elements():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:  # Left mouse button
+                    if settings_manager.handle_click(event.pos):
+                        continue  # Skip other event processing if settings handled the event
+                  # Handle settings manager keyboard input
+            if settings_manager.handle_key_input(event):
+                continue  # Skip other event processing if settings handled the event
         
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE: 
+            if event.key == pygame.K_ESCAPE and not minigame_manager.should_disable_main_game_elements(): 
                 # ESC now opens settings instead of exiting
                 if not settings_manager.is_popup_active:
                     settings_manager.is_popup_active = True
@@ -350,31 +351,34 @@ while running:
                 else:
                     # Normal collectible collection
                     player_points += 1
-                    print(f"Item collected! Points: {player_points}")
-
-    # Update collectibles system (respawn timers)
-    if map_manager.current_map_data["name"] == "main_map":  # Only on main map
+                    print(f"Item collected! Points: {player_points}")    # Update collectibles system (respawn timers) - only if not in minigame
+    if map_manager.current_map_data["name"] == "main_map" and not minigame_manager.should_disable_main_game_elements():
         tilemap.update_collectibles()
 
-    interaction_manager.update(player.rect.center)
+    # Update interaction manager - only if not in minigame
+    if not minigame_manager.should_disable_main_game_elements():
+        interaction_manager.update(player.rect.center)
 
     if minigame_manager.is_active:
         minigame_manager.update(player.rect, map_width, map_height)
     
-    eligible_interactable = interaction_manager.get_eligible_interactable()
-    if eligible_interactable:
-        if not show_interaction_popup: 
-            show_interaction_popup = True
-            player_can_move = False 
-            print(f"Player entered {eligible_interactable.id}'s interaction circle. Popup shown.")            # Check if we need to start typing a new message immediately
+    # Handle interactions - only if not in minigame
+    if not minigame_manager.should_disable_main_game_elements():
+        eligible_interactable = interaction_manager.get_eligible_interactable()
+        if eligible_interactable:
+            if not show_interaction_popup: 
+                show_interaction_popup = True
+                player_can_move = False 
+                print(f"Player entered {eligible_interactable.id}'s interaction circle. Popup shown.")
+            # Check if we need to start typing a new message immediately
             if eligible_interactable.id == "wizard" and wizard.new_message_to_type:
-                props = wizard.get_interaction_properties() # Get current message
-                text_to_type_full = props['message']
-                typed_text_display = "" # Start with one char to avoid empty split issues if first char is newline
-                typing_char_index = 0
-                typing_last_char_time = current_time_ticks 
-                typing_active = True
-                wizard.new_message_to_type = False # Consume the flag
+                    props = wizard.get_interaction_properties() # Get current message
+                    text_to_type_full = props['message']
+                    typed_text_display = "" # Start with one char to avoid empty split issues if first char is newline
+                    typing_char_index = 0
+                    typing_last_char_time = current_time_ticks 
+                    typing_active = True
+                    wizard.new_message_to_type = False # Consume the flag
             elif eligible_interactable.id.startswith("naval_npc") and naval_npc.new_message_to_type:
                 props = naval_npc.get_interaction_properties() # Get current message
                 text_to_type_full = props['message']
@@ -398,9 +402,8 @@ while running:
                 typing_char_index += 1
                 typing_last_char_time = current_time_ticks
             else:
-                typing_active = False # Typing finished
-      # Check if wizard has a new message to type (e.g., after thinking)
-    if show_interaction_popup and eligible_interactable and eligible_interactable.id == "wizard":
+                typing_active = False # Typing finished    # Check if wizard has a new message to type (e.g., after thinking) - only if not in minigame
+    if show_interaction_popup and eligible_interactable and eligible_interactable.id == "wizard" and not minigame_manager.should_disable_main_game_elements():
         if wizard.new_message_to_type and not typing_active: # Start typing if new message and not already typing
             props = wizard.get_interaction_properties()
             text_to_type_full = props['message']
@@ -410,8 +413,8 @@ while running:
             typing_active = True
             wizard.new_message_to_type = False
     
-    # Check if naval_npc has a new message to type (e.g., after thinking)
-    if show_interaction_popup and eligible_interactable and eligible_interactable.id.startswith("naval_npc"):
+    # Check if naval_npc has a new message to type (e.g., after thinking) - only if not in minigame
+    if show_interaction_popup and eligible_interactable and eligible_interactable.id.startswith("naval_npc") and not minigame_manager.should_disable_main_game_elements():
         if naval_npc.new_message_to_type and not typing_active: # Start typing if new message and not already typing
             props = naval_npc.get_interaction_properties()
             text_to_type_full = props['message']
@@ -420,15 +423,20 @@ while running:
             typing_last_char_time = current_time_ticks
             typing_active = True
             naval_npc.new_message_to_type = False
-    
+
     game_camera.update(player, map_width, map_height)
     
-    # Set update parameters for NavalNPC before calling all_sprites.update()
-    naval_npc.set_update_parameters(map_width, map_height, map_manager.can_move, player)
-    
-    # Update all sprites (including the wizard's own update logic)
-    # Sprites list is managed by map_manager for map-specific NPCs
-    all_sprites.update()
+    # Update sprites - only update NPCs if not in minigame
+    if not minigame_manager.should_disable_main_game_elements():
+        # Set update parameters for NavalNPC before calling all_sprites.update()
+        naval_npc.set_update_parameters(map_width, map_height, map_manager.can_move, player)
+        
+        # Update all sprites (including the wizard's own update logic)
+        # Sprites list is managed by map_manager for map-specific NPCs
+        all_sprites.update()
+    else:
+        # During minigame, only update the player
+        player.update()
 
     # Fill the screen with white
     screen.fill((173, 216, 230))
@@ -452,26 +460,28 @@ while running:
         
         # Draw hazards
         for hazard in minigame_manager.hazards:
-            pygame.draw.circle(screen, (255, 0, 0), (int(hazard.x), int(hazard.y)), 20)
-    
-    
-    # Ensure all_sprites only contains sprites relevant to the current map
+            pygame.draw.circle(screen, (255, 0, 0), (int(hazard.x), int(hazard.y)), 20)    
+    # Draw sprites - conditionally disable NPCs during minigame
     for sprite in all_sprites:
+        # Skip NPCs during minigame, but always draw the player
+        if minigame_manager.should_disable_main_game_elements() and hasattr(sprite, 'id') and sprite.id != "player":
+            continue
+            
         if (hasattr(sprite, 'id') and sprite.id.startswith("naval_npc") and 
             map_manager.current_map_name == "wizard_house"):
             continue
 
         screen.blit(sprite.image, game_camera.apply(sprite))
     
-    # Draw NavalNPC speech bubbles
-    if map_manager.current_map_name != "wizard_house":
+    # Draw NavalNPC speech bubbles - only if not in minigame
+    if map_manager.current_map_name != "wizard_house" and not minigame_manager.should_disable_main_game_elements():
         naval_npc.draw_speech_bubble(screen, game_camera)
 
-    # Draw interaction circles for all interactables that haven't been interacted with
-    # and are on the current map (implicitly handled if interaction_manager only has current map's interactables)
-    for interactable_obj in interaction_manager.get_all_interactables():
-        if not interaction_manager.get_interacted_flag(interactable_obj.id):
-            props = interactable_obj.get_interaction_properties()
+    # Draw interaction circles - only if not in minigame
+    if not minigame_manager.should_disable_main_game_elements():
+        for interactable_obj in interaction_manager.get_all_interactables():
+            if not interaction_manager.get_interacted_flag(interactable_obj.id):
+                props = interactable_obj.get_interaction_properties()
 
             if props['id'].startswith("naval_npc"):
                 continue
@@ -482,10 +492,8 @@ while running:
             circle_draw_center_y_on_screen = circle_center_vec.y + game_camera.camera.y
             pygame.draw.circle(screen, props['color'],
                                (int(circle_draw_center_x_on_screen), int(circle_draw_center_y_on_screen)),
-                               props['radius'], props['thickness'])
-
-    # Draw interaction popup if active
-    if show_interaction_popup and eligible_interactable:
+                               props['radius'], props['thickness'])    # Draw interaction popup if active - only if not in minigame
+    if show_interaction_popup and eligible_interactable and not minigame_manager.should_disable_main_game_elements():
         current_message_for_popup = ""
         if typing_active:
             current_message_for_popup = typed_text_display
@@ -559,11 +567,13 @@ while running:
             for text_surface in second_rendered_lines:
                 text_rect = text_surface.get_rect(centerx=second_popup_bg_rect.centerx, top=current_y_second)
                 screen.blit(text_surface, text_rect)
-                current_y_second += line_height        # --- END: Draw second popup ---    # Draw chat interface if active
-    chat_manager.draw(screen)
+                current_y_second += line_height        # --- END: Draw second popup ---    # Draw chat interface if active - only if not in minigame
+    if not minigame_manager.should_disable_main_game_elements():
+        chat_manager.draw(screen)
     
-    # Draw settings interface
-    settings_manager.draw(screen)
+    # Draw settings interface - only if not in minigame
+    if not minigame_manager.should_disable_main_game_elements():
+        settings_manager.draw(screen)
     
     # Draw point tracker
     draw_point_tracker(screen)
