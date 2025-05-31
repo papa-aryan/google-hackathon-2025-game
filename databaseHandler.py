@@ -2,6 +2,7 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 import os
+import random
 
 SERVICE_ACCOUNT_KEY_PATH = os.path.join(os.path.dirname(__file__), 'hackathon2025db.json')
 
@@ -194,6 +195,32 @@ class FirestoreHandler:
         except Exception as e:
             print(f"Error saving user points: {e}")
             return False
+
+class DatabaseHandler:
+    """Wrapper class to provide interface for quiz system"""
+    def __init__(self):
+        try:
+            self.firestore_handler = FirestoreHandler(SERVICE_ACCOUNT_KEY_PATH)
+        except Exception as e:
+            print(f"Failed to initialize DatabaseHandler: {e}")
+            self.firestore_handler = None
+    
+    def read_document(self, collection_name, document_id):
+        """Read a document from the database"""
+        if self.firestore_handler:
+            return self.firestore_handler.read_document(collection_name, document_id)
+        return None
+    
+    def get_random_ai_question(self):
+        """Get a random AI question from the ai_questions collection"""
+        if not self.firestore_handler:
+            return None
+        
+        # Get a random question ID (1-30)
+        question_id = str(random.randint(1, 30))
+        
+        # Read the question document
+        return self.read_document('ai_questions', question_id)
 
 if __name__ == "__main__":
     try:

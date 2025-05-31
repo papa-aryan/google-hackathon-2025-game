@@ -14,6 +14,7 @@ from settings_manager import SettingsManager # Import SettingsManager
 import wizardHouse # Ensure wizardHouse is imported to be available for MapManager
 import random
 from minigameManager import MinigameManager # Import MinigameManager
+from quizManager import QuizManager # Import QuizManager
 
 
 try:
@@ -65,6 +66,9 @@ settings_manager = SettingsManager(screen_width, screen_height)
 
 # Initialize MinigameManager
 minigame_manager = MinigameManager()
+
+# Initialize QuizManager
+quiz_manager = QuizManager(screen_width, screen_height)
 
 # Set up points callback for settings manager
 def update_player_points(new_points):
@@ -185,14 +189,19 @@ running = True
 last_direction_keydown_event = None # Added to track the last directional key event
 while running:
     current_time_ticks = pygame.time.get_ticks() # Get current time once per frame for typing
-
+    
     for event in pygame.event.get():        # Handle chat events first - if chat is active, it should have priority
-        if not minigame_manager.should_disable_main_game_elements():
+        if not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements():
             if chat_manager.handle_event(event):
                 continue  # Skip other event processing if chat handled the event
         
-        # Handle settings manager events
+        # Handle quiz events
         if not minigame_manager.should_disable_main_game_elements():
+            if quiz_manager.handle_event(event):
+                continue  # Skip other event processing if quiz handled the event
+        
+        # Handle settings manager events
+        if not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  # Left mouse button
                     if settings_manager.handle_click(event.pos):
@@ -227,7 +236,7 @@ while running:
             pygame.time.set_timer(pygame.USEREVENT + 2, 0)
 
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE and not minigame_manager.should_disable_main_game_elements(): 
+            if event.key == pygame.K_ESCAPE and not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements(): 
                 # ESC now opens settings instead of exiting
                 if not settings_manager.is_popup_active:
                     settings_manager.is_popup_active = True
@@ -366,31 +375,38 @@ while running:
     settings_manager.set_current_points(player_points)
     
     if player_can_move and not chat_manager.is_active and not settings_manager.show_input_fields:
-        player.update_position(keys, map_width, map_height, last_direction_keydown_event, map_manager.can_move)
-        # Check for item collection after player movement
+        player.update_position(keys, map_width, map_height, last_direction_keydown_event, map_manager.can_move)        # Check for item collection after player movement
         if map_manager.current_map_data["name"] == "main_map":  # Only on main map
             if tilemap.collect_item(player.rect.centerx, player.rect.centery+10, map_manager.get_current_tile_size()):
-                # 50% chance to trigger minigame
-                if random.random() < 0.9:
+                # Random chance to trigger minigame or quiz
+                rand_chance = random.random()
+                if rand_chance < 0.3:  # 30% chance for quiz
+                    print("Quiz triggered!")
+                    quiz_manager.start_quiz(1)  # 1 point for this collectible
+                elif rand_chance < 0.9:  # 30% chance for minigame (0.3 to 0.6)
                     print("Minigame triggered!")
                     minigame_manager.start_minigame(1, player.rect)  # 1 point for this collectible
                     map_manager.switch_to_minigame(player, all_sprites, interaction_manager, update_map_dimensions_from_manager)
-                else:
-                    # Normal collectible collection
+                else:                    # Normal collectible collection (40% chance)
                     player_points += 1
-                    print(f"Item collected! Points: {player_points}")    # Update collectibles system (respawn timers) - only if not in minigame
-    if map_manager.current_map_data["name"] == "main_map" and not minigame_manager.should_disable_main_game_elements():
+                    print(f"Item collected! Points: {player_points}")
+    
+    # Update collectibles system (respawn timers) - only if not in minigame or quiz
+    if map_manager.current_map_data["name"] == "main_map" and not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements():
         tilemap.update_collectibles()
 
-    # Update interaction manager - only if not in minigame
-    if not minigame_manager.should_disable_main_game_elements():
+    # Update interaction manager - only if not in minigame or quiz
+    if not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements():
         interaction_manager.update(player.rect.center)
 
     if minigame_manager.is_active:
         minigame_manager.update(player.rect, map_width, map_height)
     
-    # Handle interactions - only if not in minigame
-    if not minigame_manager.should_disable_main_game_elements():
+    # Update quiz manager
+    quiz_manager.update()
+    
+    # Handle interactions - only if not in minigame or quiz
+    if not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements():
         eligible_interactable = interaction_manager.get_eligible_interactable()
         if eligible_interactable:
             if not show_interaction_popup: 
@@ -429,8 +445,8 @@ while running:
                 typing_char_index += 1
                 typing_last_char_time = current_time_ticks
             else:
-                typing_active = False # Typing finished    # Check if wizard has a new message to type (e.g., after thinking) - only if not in minigame
-    if show_interaction_popup and eligible_interactable and eligible_interactable.id == "wizard" and not minigame_manager.should_disable_main_game_elements():
+                typing_active = False # Typing finished    # Check if wizard has a new message to type (e.g., after thinking) - only if not in minigame or quiz
+    if show_interaction_popup and eligible_interactable and eligible_interactable.id == "wizard" and not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements():
         if wizard.new_message_to_type and not typing_active: # Start typing if new message and not already typing
             props = wizard.get_interaction_properties()
             text_to_type_full = props['message']
@@ -439,9 +455,8 @@ while running:
             typing_last_char_time = current_time_ticks
             typing_active = True
             wizard.new_message_to_type = False
-    
-    # Check if naval_npc has a new message to type (e.g., after thinking) - only if not in minigame
-    if show_interaction_popup and eligible_interactable and eligible_interactable.id.startswith("naval_npc") and not minigame_manager.should_disable_main_game_elements():
+      # Check if naval_npc has a new message to type (e.g., after thinking) - only if not in minigame or quiz
+    if show_interaction_popup and eligible_interactable and eligible_interactable.id.startswith("naval_npc") and not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements():
         if naval_npc.new_message_to_type and not typing_active: # Start typing if new message and not already typing
             props = naval_npc.get_interaction_properties()
             text_to_type_full = props['message']
@@ -452,8 +467,7 @@ while running:
             naval_npc.new_message_to_type = False
 
     game_camera.update(player, map_width, map_height)
-    
-    # Update sprites - only update NPCs if not in minigame
+      # Update sprites - only update NPCs if not in minigame
     if not minigame_manager.should_disable_main_game_elements():
         # Set update parameters for NavalNPC before calling all_sprites.update()
         naval_npc.set_update_parameters(map_width, map_height, map_manager.can_move, player)
@@ -499,8 +513,7 @@ while running:
     minigame_manager.draw_result_popup(screen)
     
     # Draw sprites - conditionally disable NPCs during minigame
-    for sprite in all_sprites:
-        # Skip NPCs during minigame, but always draw the player
+    for sprite in all_sprites:        # Skip NPCs during minigame, but always draw the player
         if minigame_manager.should_disable_main_game_elements() and hasattr(sprite, 'id') and sprite.id != "player":
             continue
             
@@ -509,8 +522,7 @@ while running:
             continue
 
         screen.blit(sprite.image, game_camera.apply(sprite))
-    
-    # Draw NavalNPC speech bubbles - only if not in minigame
+      # Draw NavalNPC speech bubbles - only if not in minigame
     if map_manager.current_map_name != "wizard_house" and not minigame_manager.should_disable_main_game_elements():
         naval_npc.draw_speech_bubble(screen, game_camera)
 
@@ -611,6 +623,10 @@ while running:
     # Draw settings interface - only if not in minigame
     if not minigame_manager.should_disable_main_game_elements():
         settings_manager.draw(screen)
+    
+    # Draw quiz interface - only if not in minigame
+    if not minigame_manager.should_disable_main_game_elements():
+        quiz_manager.draw(screen)
     
     # Draw point tracker
     draw_point_tracker(screen)
