@@ -203,6 +203,29 @@ while running:
         
         if event.type == pygame.QUIT:
             running = False
+        
+        elif event.type == pygame.USEREVENT + 1:  # Completion callback
+            if minigame_manager.completion_callback:
+                minigame_manager.completion_callback(minigame_manager.pending_collectible_points)
+            # Now actually end the minigame
+            minigame_manager.is_active = False
+            minigame_manager.minigame_completed = False
+            player_can_move = True
+            show_interaction_popup = False
+            typing_active = False
+            pygame.time.set_timer(pygame.USEREVENT + 1, 0)
+
+        elif event.type == pygame.USEREVENT + 2:  # Death callback
+            if minigame_manager.player_death_callback:
+                minigame_manager.player_death_callback()
+            # Now actually end the minigame
+            minigame_manager.is_active = False
+            minigame_manager.minigame_completed = False
+            player_can_move = True
+            show_interaction_popup = False
+            typing_active = False
+            pygame.time.set_timer(pygame.USEREVENT + 2, 0)
+
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE and not minigame_manager.should_disable_main_game_elements(): 
                 # ESC now opens settings instead of exiting
@@ -470,8 +493,10 @@ while running:
         # Draw debug collision areas
         minigame_manager.draw_debug_info(screen, player.rect, game_camera)
         
-        # Add this line to draw speed popup
+        # Draw speed popup
         minigame_manager.draw_speed_popup(screen)
+
+    minigame_manager.draw_result_popup(screen)
     
     # Draw sprites - conditionally disable NPCs during minigame
     for sprite in all_sprites:
@@ -590,6 +615,8 @@ while running:
     # Draw point tracker
     draw_point_tracker(screen)
     
+
+
     # Update the display
     pygame.display.flip()
 

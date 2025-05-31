@@ -125,7 +125,6 @@ class MinigameHazard:
         
     def check_player_collision(self, player_rect):
         """Check if hazard hits player"""
-        hazard_radius = 15
         
         # Player collision area (same as debug visualization)
         player_left = player_rect.left + PLAYER_COLLISION_MARGIN_LEFT
