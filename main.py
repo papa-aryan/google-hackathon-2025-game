@@ -380,7 +380,7 @@ while running:
             if tilemap.collect_item(player.rect.centerx, player.rect.centery+10, map_manager.get_current_tile_size()):
                 # Random chance to trigger minigame or quiz
                 rand_chance = random.random()
-                if rand_chance < 0.3:  # 30% chance for quiz
+                if rand_chance < 0.1:  # 30% chance for quiz
                     print("Quiz triggered!")
                     quiz_manager.start_quiz(1)  # 1 point for this collectible
                 elif rand_chance < 0.9:  # 30% chance for minigame (0.3 to 0.6)

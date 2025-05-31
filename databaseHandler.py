@@ -210,17 +210,6 @@ class DatabaseHandler:
         if self.firestore_handler:
             return self.firestore_handler.read_document(collection_name, document_id)
         return None
-    
-    def get_random_ai_question(self):
-        """Get a random AI question from the ai_questions collection"""
-        if not self.firestore_handler:
-            return None
-        
-        # Get a random question ID (1-30)
-        question_id = str(random.randint(1, 30))
-        
-        # Read the question document
-        return self.read_document('ai_questions', question_id)
 
 if __name__ == "__main__":
     try:

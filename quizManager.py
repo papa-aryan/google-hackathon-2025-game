@@ -294,24 +294,53 @@ Please respond with 'CORRECT' if the answer is sufficiently accurate, otherwise 
         surface.blit(input_label, (20, y_offset))
         y_offset += input_label.get_height() + 10
         
-        # Input box
-        input_box_rect = pygame.Rect(20, y_offset, self.popup_width - 40, 40)
+        # Calculate input box dimensions for multi-line support
+        input_box_width = self.popup_width - 40
+        input_box_height = 80  # Increased height for multi-line
+        input_box_rect = pygame.Rect(20, y_offset, input_box_width, input_box_height)
         pygame.draw.rect(surface, self.input_bg_color, input_box_rect)
         pygame.draw.rect(surface, self.input_border_color, input_box_rect, 2)
         
-        # Input text
+        # Wrap and render input text
         if self.player_answer:
-            input_text = self.input_font.render(self.player_answer, True, self.text_color)
-            surface.blit(input_text, (25, y_offset + 8))
+            wrapped_input_lines = self._wrap_text(self.player_answer, self.input_font, input_box_width - 20)
+            
+            line_y = y_offset + 8
+            for i, line in enumerate(wrapped_input_lines):
+                if line_y + self.input_font.get_height() > y_offset + input_box_height - 8:
+                    # If we're running out of space, show "..." to indicate more text
+                    if i < len(wrapped_input_lines) - 1:
+                        overflow_text = self.input_font.render("...", True, (150, 150, 150))
+                        surface.blit(overflow_text, (25, line_y))
+                    break
+                
+                input_text = self.input_font.render(line, True, self.text_color)
+                surface.blit(input_text, (25, line_y))
+                line_y += self.input_font.get_height() + 2
         
-        # Cursor
-        cursor_x = 25 + (self.input_font.size(self.player_answer)[0] if self.player_answer else 0)
-        if pygame.time.get_ticks() % 1000 < 500:  # Blinking cursor
-            pygame.draw.line(surface, self.text_color, 
-                           (cursor_x, y_offset + 8), 
-                           (cursor_x, y_offset + 32), 2)
+        # Cursor (show on last visible line)
+        if self.player_answer:
+            wrapped_input_lines = self._wrap_text(self.player_answer, self.input_font, input_box_width - 20)
+            if wrapped_input_lines:
+                # Calculate cursor position on the last visible line
+                visible_lines = min(len(wrapped_input_lines), 
+                                (input_box_height - 16) // (self.input_font.get_height() + 2))
+                if visible_lines > 0:
+                    last_line = wrapped_input_lines[visible_lines - 1]
+                    cursor_x = 25 + self.input_font.size(last_line)[0]
+                    cursor_y = y_offset + 8 + (visible_lines - 1) * (self.input_font.get_height() + 2)
+                    if pygame.time.get_ticks() % 1000 < 500:  # Blinking cursor
+                        pygame.draw.line(surface, self.text_color, 
+                                    (cursor_x, cursor_y), 
+                                    (cursor_x, cursor_y + self.input_font.get_height()), 2)
+        else:
+            # Show cursor at start if no text
+            if pygame.time.get_ticks() % 1000 < 500:
+                pygame.draw.line(surface, self.text_color, 
+                            (25, y_offset + 8), 
+                            (25, y_offset + 8 + self.input_font.get_height()), 2)
         
-        y_offset += 60
+        y_offset += input_box_height + 20
         
         # Instructions
         instructions = [
