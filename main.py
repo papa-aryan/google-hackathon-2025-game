@@ -269,6 +269,7 @@ while running:
             elif event.key == pygame.K_F1:  # F1 to toggle debug
                 if minigame_manager.is_active:
                     minigame_manager.toggle_debug_mode()
+                player_points += 1  
 
             elif event.key == pygame.K_u: # Check for 'U' key press
                 print("'U' key pressed. Attempting to reload and refresh map data...")
@@ -329,10 +330,13 @@ while running:
                         wizard_chat_manager.start_conversation()
                     
                     elif eligible_interactable.id.startswith("naval_npc"):
-                        print(f"E pressed. Talking to Naval Officer.")
-                        # Naval NPC now only shows "Hi" message
-                        naval_npc.interaction_message = "Hi"
-                        naval_npc.new_message_to_type = True
+                        print(f"E pressed. Talking to Naval.")
+                        if naval_npc.check_points_and_interact(player_points):
+                            # Player has enough points - normal interaction will proceed
+                            pass
+                        else:
+                            # Player doesn't have enough points - show popup
+                            naval_npc.show_insufficient_points_message()
                     
                     elif eligible_interactable.id.startswith("mysterious_rect"):
                         print(f"E pressed. Interacting with Mysterious Rectangle.")
@@ -575,6 +579,8 @@ while running:
             continue
 
         screen.blit(sprite.image, game_camera.apply(sprite))      # Draw NavalNPC speech bubbles - only if not in minigame
+
+    # Draw NavalNPC speech bubbles - only if not in minigame
     if map_manager.current_map_name != "wizard_house" and not minigame_manager.should_disable_main_game_elements():
         naval_npc.draw_speech_bubble(screen, game_camera)
 
@@ -584,6 +590,10 @@ while running:
 
     # Draw interaction circles - only if not in minigame
     if not minigame_manager.should_disable_main_game_elements():
+        
+        # Draw naval NPC insufficient points popup - only if not in minigame
+        naval_npc.draw_insufficient_points_popup(screen)
+        
         for interactable_obj in interaction_manager.get_all_interactables():
             if not interaction_manager.get_interacted_flag(interactable_obj.id):
                 props = interactable_obj.get_interaction_properties()

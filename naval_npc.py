@@ -43,9 +43,14 @@ class NavalNPC(Entity):
         self.interaction_center_y = self.rect.bottom
         self.static_interaction_center = (self.interaction_center_x, self.interaction_center_y)
         
-        self.prompt_talk = "Press E to Interact with Naval. Press Q to Walk Away."
-        self.interaction_message = "Hi"  # Simple static message
+        self.interaction_message = "Press E to Interact with Naval. Press Q to Walk Away."  # Simple static message
         self.new_message_to_type = False  # For consistency with interaction system
+
+        # Point check popup system
+        self.show_insufficient_points_popup = False
+        self.popup_start_time = 0
+        self.popup_duration = 4000  # 4 seconds in milliseconds
+        self.popup_message = "Come back when you have at least 5 points bro..."
     
     def update(self):
         """Basic update method for pygame sprite system"""
@@ -61,7 +66,6 @@ class NavalNPC(Entity):
         self._stored_collision_func = collision_check_func
         self._stored_player_sprite = player_sprite 
 
-    
     def update_ai_behavior(self, map_width, map_height, collision_check_func):
         """Update NPC movement, speaking, and other behaviors"""
         current_time = pygame.time.get_ticks()
@@ -72,6 +76,9 @@ class NavalNPC(Entity):
         
         # Update speaking behavior
         self._update_speaking()
+        
+        # Update popup timer
+        self.update_popup()
         
         # Update interaction center when NPC moves
         self.interaction_center_x = self.rect.centerx
@@ -186,8 +193,20 @@ class NavalNPC(Entity):
 
     def reset_interaction_state(self):
         """Reset the NPC's interaction state"""
-        self.interaction_message = "Hi"
+        self.interaction_message = "Press E to Interact with Naval. Press Q to Walk Away."
         self.new_message_to_type = False
+
+    def check_points_and_interact(self, player_points):
+        """Check if player has enough points and set appropriate interaction state"""
+        if player_points >= 5:
+            # TODO: Implement logic for when player has sufficient points
+            self.interaction_message = "Welcome! You have enough points."
+            self.new_message_to_type = True
+            return True  # Sufficient points
+        else:
+            # Player doesn't have enough points - trigger error popup
+            return False  # Insufficient points
+
 
     def get_interaction_properties(self):
         """Returns interaction properties for the interaction manager"""
@@ -248,3 +267,49 @@ class NavalNPC(Entity):
                 text_rect = text_surface.get_rect(centerx=bubble_rect.centerx, top=current_y)
                 screen.blit(text_surface, text_rect)
                 current_y += line_height
+
+    def update_popup(self):
+        """Update popup timer and visibility"""
+        if self.show_insufficient_points_popup:
+            current_time = pygame.time.get_ticks()
+            if current_time - self.popup_start_time >= self.popup_duration:
+                self.show_insufficient_points_popup = False
+
+    def show_insufficient_points_message(self):
+        """Show the insufficient points popup"""
+        self.show_insufficient_points_popup = True
+        self.popup_start_time = pygame.time.get_ticks()
+
+    def draw_insufficient_points_popup(self, screen):
+        """Draw insufficient points popup"""
+        if not self.show_insufficient_points_popup:
+            return
+            
+        # Create popup similar to minigame result popup
+        font = pygame.font.Font(None, 48)
+        text_surface = font.render(self.popup_message, True, (255, 255, 255))
+        
+        # Background dimensions
+        padding = 30
+        bg_width = text_surface.get_width() + padding * 2
+        bg_height = text_surface.get_height() + padding * 2
+        
+        # Center on screen
+        screen_width = screen.get_width()
+        screen_height = screen.get_height()
+        bg_x = (screen_width - bg_width) // 2
+        bg_y = (screen_height - bg_height) // 3  # Upper third of screen
+        
+        # Draw background
+        bg_surface = pygame.Surface((bg_width, bg_height))
+        bg_surface.fill((50, 50, 50))  # Dark background
+        screen.blit(bg_surface, (bg_x, bg_y))
+        
+        # Draw border
+        border_rect = pygame.Rect(bg_x - 2, bg_y - 2, bg_width + 4, bg_height + 4)
+        pygame.draw.rect(screen, (255, 100, 100), border_rect, 4)  # Red border
+        
+        # Draw text
+        text_x = bg_x + padding
+        text_y = bg_y + padding
+        screen.blit(text_surface, (text_x, text_y))
