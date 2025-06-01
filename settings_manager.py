@@ -542,7 +542,7 @@ class SettingsManager:
         box_width = text_width + padding * 2
         box_height = text_height + padding
         box_x = (self.screen_width - box_width) // 2
-        box_y = 50  # Position near top of screen
+        box_y = 20  # Position near top of screen
         
         # Create a surface with alpha for transparency
         status_surface = pygame.Surface((box_width, box_height))

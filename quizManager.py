@@ -42,7 +42,7 @@ class QuizManager:
         pygame.font.init()
         self.title_font = pygame.font.Font(None, 48)
         self.question_font = pygame.font.Font(None, 32)
-        self.input_font = pygame.font.Font(None, 28)
+        self.input_font = pygame.font.Font(None, 30)
         self.button_font = pygame.font.Font(None, 36)
         
         # Layout
@@ -168,7 +168,7 @@ class QuizManager:
                 return True
             else:
                 # Add character to input
-                if len(self.player_answer) < 200 and event.unicode.isprintable():
+                if len(self.player_answer) < 450 and event.unicode.isprintable():
                     self.player_answer += event.unicode
                 return True
         
@@ -321,7 +321,7 @@ Please respond with 'CORRECT' if the answer is sufficiently accurate, otherwise 
         
         # Calculate input box dimensions for multi-line support
         input_box_width = self.popup_width - 40
-        input_box_height = 80  # Increased height for multi-line
+        input_box_height = 170  # Increased height for multi-line
         input_box_rect = pygame.Rect(20, y_offset, input_box_width, input_box_height)
         pygame.draw.rect(surface, self.input_bg_color, input_box_rect)
         pygame.draw.rect(surface, self.input_border_color, input_box_rect, 2)

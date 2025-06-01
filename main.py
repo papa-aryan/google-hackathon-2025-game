@@ -1,20 +1,20 @@
 import pygame
 import ctypes
 import sys
-import importlib # Added for reloading modules
-from player import Player # Import Player from player.py
-from camera import Camera # Import Camera from camera.py
-import tilemap # Import the new tilemap module
-from wizard import Wizard # Import the Wizard class
-from naval_npc import NavalNPC # Import the Naval NPC class
-from interaction_manager import InteractionManager # Import InteractionManager
-from mapManager import MapManager # Import MapManager
-from chat_manager import ChatManager # Import ChatManager
-from settings_manager import SettingsManager # Import SettingsManager
+import importlib
+from player import Player
+from camera import Camera
+import tilemap 
+from wizard import Wizard
+from naval_npc import NavalNPC
+from interaction_manager import InteractionManager
+from mapManager import MapManager 
+from wizardChatManager import WizardChatManager 
+from settings_manager import SettingsManager 
 import wizardHouse # Ensure wizardHouse is imported to be available for MapManager
 import random
-from minigameManager import MinigameManager # Import MinigameManager
-from quizManager import QuizManager # Import QuizManager
+from minigameManager import MinigameManager
+from quizManager import QuizManager
 
 
 try:
@@ -59,7 +59,7 @@ screen_height = 900
 screen = pygame.display.set_mode((screen_width, screen_height))
 
 # Initialize ChatManager
-chat_manager = ChatManager(screen_width, screen_height)
+wizard_chat_manager = WizardChatManager(screen_width, screen_height)
 
 # Initialize SettingsManager
 settings_manager = SettingsManager(screen_width, screen_height)
@@ -206,7 +206,7 @@ while running:
     
     for event in pygame.event.get():        # Handle chat events first - if chat is active, it should have priority
         if not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements():
-            if chat_manager.handle_event(event):
+            if wizard_chat_manager.handle_event(event):
                 continue  # Skip other event processing if chat handled the event
         
         # Handle quiz events
@@ -319,7 +319,7 @@ while running:
                         show_interaction_popup = False
                         player_can_move = False  # Disable player movement during chat
                         typing_active = False
-                        chat_manager.start_conversation()
+                        wizard_chat_manager.start_conversation()
                     
                     elif eligible_interactable.id.startswith("naval_npc"):
                         print(f"E pressed. Talking to Naval Officer.")
@@ -374,7 +374,7 @@ while running:
                             typing_active = False # Stop typing                            naval_npc.reset_interaction_state() # Reset naval NPC's state
     
     # Handle chat state changes - restore player movement when chat ends
-    if not chat_manager.is_active and not player_can_move and not show_interaction_popup:
+    if not wizard_chat_manager.is_active and not player_can_move and not show_interaction_popup:
         player_can_move = True
         print("Chat ended, restoring player movement")
         
@@ -388,7 +388,7 @@ while running:
     # Update settings manager with current points
     settings_manager.set_current_points(player_points)
     
-    if player_can_move and not chat_manager.is_active and not settings_manager.show_input_fields and not quiz_manager.is_active:
+    if player_can_move and not wizard_chat_manager.is_active and not settings_manager.show_input_fields and not quiz_manager.is_active:
         player.update_position(keys, map_width, map_height, last_direction_keydown_event, map_manager.can_move)        # Check for item collection after player movement
         if map_manager.current_map_data["name"] == "main_map":  # Only on main map
             if tilemap.collect_item(player.rect.centerx, player.rect.centery+10, map_manager.get_current_tile_size()):
@@ -632,7 +632,7 @@ while running:
                 screen.blit(text_surface, text_rect)
                 current_y_second += line_height        # --- END: Draw second popup ---    # Draw chat interface if active - only if not in minigame
     if not minigame_manager.should_disable_main_game_elements():
-        chat_manager.draw(screen)
+        wizard_chat_manager.draw(screen)
     
     # Draw settings interface - only if not in minigame
     if not minigame_manager.should_disable_main_game_elements():
