@@ -652,3 +652,19 @@ class SettingsManager:
     def set_signed_in_state(self, is_signed_in):
         """Update the player's sign-in state"""
         self.is_signed_in = is_signed_in
+
+    def get_current_username(self):
+        """Get the currently signed-in username."""
+        return self.current_username if self.is_signed_in else None
+
+    def get_unlocked_quotes(self):
+        """Get unlocked quotes for current user."""
+        if self.current_username and self.db_handler:
+            return self.db_handler.get_user_unlocked_quotes(self.current_username)
+        return []
+
+    def add_unlocked_quote(self, quote_id):
+        """Add a quote to current user's unlocked list."""
+        if self.current_username and self.db_handler:
+            return self.db_handler.add_unlocked_quote(self.current_username, quote_id)
+        return False

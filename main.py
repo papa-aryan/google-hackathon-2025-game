@@ -190,6 +190,7 @@ naval_npc_y = random.randint(500, 850)
 naval_npc = NavalNPC(naval_npc_x, naval_npc_y, interaction_radius=40)
 # Set naval NPC callback (add this after naval_npc creation)
 naval_npc.set_point_deduction_callback(on_naval_point_deduction)
+naval_npc.set_settings_manager(settings_manager)
 
 
 # Create Mysterious Rectangle in top-right corner of map

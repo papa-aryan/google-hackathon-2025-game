@@ -118,17 +118,15 @@ class FirestoreHandler:
             print("Firestore client not available. Cannot sign up user.")
             return False
         try:
-            # Using username as document ID for simplicity, ensure usernames are unique.
-            # Alternatively, use auto-generated IDs and store username as a field.
             user_ref = self.db.collection('users').document(username)
-            # Check if user already exists
             if user_ref.get().exists:
                 print(f"Username '{username}' already exists.")
                 return False
             user_ref.set({
                 'username': username,
-                'password': password,  # WARNING: Storing plain text password
-                'points': initial_points
+                'password': password,
+                'points': initial_points,
+                'unlocked_quotes': []  # New field for tracking unlocked quotes
             })
             print(f"User '{username}' signed up successfully with {initial_points} points.")
             return True
@@ -194,6 +192,54 @@ class FirestoreHandler:
             return True
         except Exception as e:
             print(f"Error saving user points: {e}")
+            return False
+        
+    def get_user_unlocked_quotes(self, username):
+        """Gets the unlocked quotes list for a specific user."""
+        if not self.db:
+            print("Firestore client not available. Cannot get user quotes.")
+            return []
+        try:
+            user_ref = self.db.collection('users').document(username)
+            doc = user_ref.get()
+            if doc.exists:
+                user_data = doc.to_dict()
+                unlocked_quotes = user_data.get('unlocked_quotes', [])
+                print(f"User '{username}' has unlocked quotes: {unlocked_quotes}")
+                return unlocked_quotes
+            else:
+                print(f"Username '{username}' not found.")
+                return []
+        except Exception as e:
+            print(f"Error getting user unlocked quotes: {e}")
+            return []
+
+    def add_unlocked_quote(self, username, quote_id):
+        """Adds a quote ID to user's unlocked quotes list."""
+        if not self.db:
+            print("Firestore client not available. Cannot add unlocked quote.")
+            return False
+        try:
+            user_ref = self.db.collection('users').document(username)
+            doc = user_ref.get()
+            if doc.exists:
+                user_data = doc.to_dict()
+                unlocked_quotes = user_data.get('unlocked_quotes', [])
+                
+                # Add quote_id if not already present
+                if quote_id not in unlocked_quotes:
+                    unlocked_quotes.append(quote_id)
+                    user_ref.update({'unlocked_quotes': unlocked_quotes})
+                    print(f"Added quote {quote_id} to user '{username}' unlocked quotes.")
+                    return True
+                else:
+                    print(f"Quote {quote_id} already unlocked for user '{username}'.")
+                    return False
+            else:
+                print(f"Username '{username}' not found.")
+                return False
+        except Exception as e:
+            print(f"Error adding unlocked quote: {e}")
             return False
 
 class DatabaseHandler:

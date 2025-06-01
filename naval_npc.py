@@ -59,7 +59,11 @@ class NavalNPC(Entity):
         self.quote_popup_start_time = 0
         self.quote_popup_duration = 6000  # 6 seconds in milliseconds
         self.current_quote = ""
-        
+
+        # Quote tracking
+        self.settings_manager = None  # Will be set from main
+        self.available_quote_ids = list(range(1, 6))  # [1, 2, 3, 4, 5]
+    
         # Initialize database handler
         try:
             self.db_handler = DatabaseHandler()
@@ -224,31 +228,59 @@ class NavalNPC(Entity):
             # Player doesn't have enough points - trigger error popup
             return False  # Insufficient points
 
+    def set_settings_manager(self, settings_manager):
+        """Set reference to settings manager for user tracking."""
+        self.settings_manager = settings_manager
+
+    def _get_available_quotes(self):
+        """Get list of quote IDs that haven't been unlocked yet."""
+        if not self.settings_manager:
+            return self.available_quote_ids  # Return all if no user tracking
+        
+        unlocked_quotes = self.settings_manager.get_unlocked_quotes()
+        available = [qid for qid in self.available_quote_ids if qid not in unlocked_quotes]
+        return available
+
     def _fetch_and_show_quote(self):
         """Fetch a random quote from database and show quote popup"""
         if not self.db_handler:
             print("Error: No database connection for naval NPC")
             return
+        
+        # Get available quotes (not yet unlocked)
+        available_quotes = self._get_available_quotes()
+        
+        if not available_quotes:
+            # All quotes unlocked - show special message
+            self.current_quote = "You have unlocked all of my wisdom, young seeker. Return when new knowledge arrives."
+            self.show_quote_popup = True
+            self.quote_popup_start_time = pygame.time.get_ticks()
+            print("All naval quotes already unlocked!")
+            return
             
         try:
-            # Get random quote number (1-5)
-            quote_number = random.randint(1, 5)
+            # Get random quote from available ones
+            quote_id = random.choice(available_quotes)
             
             # Fetch quote from naval_quotes collection
-            quote_doc = self.db_handler.read_document("naval_quotes", str(quote_number))
+            quote_doc = self.db_handler.read_document("naval_quotes", str(quote_id))
             
             if quote_doc and "quote" in quote_doc:
                 self.current_quote = quote_doc["quote"]
                 self.show_quote_popup = True
                 self.quote_popup_start_time = pygame.time.get_ticks()
                 
+                # Mark quote as unlocked
+                if self.settings_manager:
+                    self.settings_manager.add_unlocked_quote(quote_id)
+                
                 # Deduct points through callback
                 if self.point_deduction_callback:
                     self.point_deduction_callback(5)
                     
-                print(f"Naval quote fetched: {self.current_quote[:50]}...")
+                print(f"Naval quote {quote_id} fetched and unlocked: {self.current_quote[:50]}...")
             else:
-                print(f"Error: Could not fetch quote {quote_number} from naval_quotes collection")
+                print(f"Error: Could not fetch quote {quote_id} from naval_quotes collection")
                 
         except Exception as e:
             print(f"Error fetching naval quote: {e}")
