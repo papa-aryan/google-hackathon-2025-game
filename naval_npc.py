@@ -36,7 +36,7 @@ class NavalNPC(Entity):
         self.speaking_interval = random.randint(300,480) 
         self.is_speaking = False
         self.speech_duration = 300 
-        self.current_speech = "Exchange 5 points for timeless wisdom?"
+        self.current_speech = "Exchange 5 points for some timeless wisdom?"
         self.speech_bubble_offset_y = -40  # Above the NPC
         
         # Interaction properties
