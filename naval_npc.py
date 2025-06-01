@@ -1,9 +1,7 @@
 import pygame
 import random
-import threading
 import textwrap
 from entity import Entity
-from staticAPI import get_AI_question
 
 class NavalNPC(Entity):
     def __init__(self, x, y, interaction_radius=50):
@@ -33,10 +31,10 @@ class NavalNPC(Entity):
         
         # Speaking properties
         self.speaking_timer = 0
-        self.speaking_interval = random.randint(4000, 8000) 
+        self.speaking_interval = random.randint(300,480) 
         self.is_speaking = False
         self.speech_duration = 300 
-        self.current_speech = ""
+        self.current_speech = "Exchange 5 points for timeless wisdom?"
         self.speech_bubble_offset_y = -40  # Above the NPC
         
         # Interaction properties
@@ -45,13 +43,9 @@ class NavalNPC(Entity):
         self.interaction_center_y = self.rect.bottom
         self.static_interaction_center = (self.interaction_center_x, self.interaction_center_y)
         
-        self.prompt_talk = "Press E to Talk to Naval. Press Q to Walk Away."
-        self.interaction_message = self.prompt_talk
-        self.is_fetching_response = False
-        self.response_fetch_thread = None
-        self.new_message_to_type = False # AI speaking state
-        self.is_fetching_speech = False
-        self.speech_fetch_thread = None
+        self.prompt_talk = "Press E to Interact with Naval. Press Q to Walk Away."
+        self.interaction_message = "Hi"  # Simple static message
+        self.new_message_to_type = False  # For consistency with interaction system
     
     def update(self):
         """Basic update method for pygame sprite system"""
@@ -174,87 +168,25 @@ class NavalNPC(Entity):
                 self.movement_duration = random.randint(60, 180)
 
     def _update_speaking(self):
-        """Handle AI speaking behavior"""
+        """Handle simple speech bubble display"""
         # Update speech timer
         self.speaking_timer += 1
         
-        # Check if it's time to speak
-        if not self.is_speaking and not self.is_fetching_speech and self.speaking_timer >= self.speaking_interval:
-            self._start_ai_speech()
+        # Check if it's time to show speech bubble
+        if not self.is_speaking and self.speaking_timer >= self.speaking_interval:
+            self.is_speaking = True
+            self.speech_duration = 300  # 5 seconds at 60 FPS
             self.speaking_timer = 0
-            self.speaking_interval = random.randint(4000, 8000) 
-        
-        # Handle speech duration
+            self.speaking_interval = random.randint(240, 480)  # 4-8 seconds at 60 FPS
+          # Handle speech duration
         if self.is_speaking:
             self.speech_duration -= 1
             if self.speech_duration <= 0:
                 self.is_speaking = False
-                self.current_speech = ""
-                self.speech_duration = 300  # Reset for next speech
-
-    def _start_ai_speech(self):
-        """Start fetching AI-generated speech in a separate thread"""
-        if not self.is_fetching_speech:
-            self.is_fetching_speech = True
-            self.speech_fetch_thread = threading.Thread(target=self._fetch_ai_speech)
-            self.speech_fetch_thread.daemon = True
-            self.speech_fetch_thread.start()
-
-    def _fetch_ai_speech(self):
-        """Fetch AI-generated speech (runs in separate thread)"""
-        try:
-            speech = get_AI_question()
-            WRAP_WIDTH = 30  # Shorter width for speech bubbles
-            
-            if speech and speech != "Could not fetch a joke.":
-                wrapped_speech = textwrap.fill(speech, width=WRAP_WIDTH)
-                self.current_speech = wrapped_speech
-                self.is_speaking = True
-                self.speech_duration = 180  # 3 seconds
-            else:
-                self.current_speech = "Hmm..."
-                self.is_speaking = True
-                self.speech_duration = 120  # 2 seconds
-        except Exception as e:
-            print(f"Error fetching AI speech for Naval NPC: {e}")
-            self.current_speech = "..."
-            self.is_speaking = True
-            self.speech_duration = 60  # 1 second
-        finally:
-            self.is_fetching_speech = False
-
-    def request_new_response(self):
-        """Request a new AI response for interaction"""
-        if not self.is_fetching_response:
-            self.is_fetching_response = True
-            self.interaction_message = "Naval is thinking..."
-            self.new_message_to_type = True
-            self.response_fetch_thread = threading.Thread(target=self._fetch_and_update_response)
-            self.response_fetch_thread.daemon = True
-            self.response_fetch_thread.start()
-
-    def _fetch_and_update_response(self):
-        """Fetch AI response for interaction (runs in separate thread)"""
-        try:
-            response = get_AI_question()
-            WRAP_WIDTH = 50
-            
-            if response and response != "Could not fetch a joke.":
-                wrapped_response = textwrap.fill(response, width=WRAP_WIDTH)
-                self.interaction_message = f"Naval says:\n\"{wrapped_response}\""
-            else:
-                self.interaction_message = "Naval seems lost in thought. Please try again later."
-        except Exception as e:
-            print(f"Error fetching AI response for Naval NPC: {e}")
-            self.interaction_message = "Naval is having trouble speaking right now."
-        finally:
-            self.is_fetching_response = False
-            self.new_message_to_type = True
 
     def reset_interaction_state(self):
         """Reset the NPC's interaction state"""
-        self.interaction_message = self.prompt_talk
-        self.is_fetching_response = False
+        self.interaction_message = "Hi"
         self.new_message_to_type = False
 
     def get_interaction_properties(self):
@@ -269,15 +201,16 @@ class NavalNPC(Entity):
         }
 
     def draw_speech_bubble(self, screen, camera):
-        """Draw speech bubble if NPC is speaking"""
+        """Draw speech bubble with fixed message"""
         if self.is_speaking and self.current_speech:
             # Calculate speech bubble position relative to camera
             bubble_center_x = self.rect.centerx + camera.camera.x
             bubble_center_y = self.rect.top + self.speech_bubble_offset_y + camera.camera.y
             
-            # Render speech text
-            font = pygame.font.Font(None, 24)
-            speech_lines = self.current_speech.split('\n')
+            # Render speech text with wrapping
+            font = pygame.font.Font(None, 30)
+            wrapped_text = textwrap.fill(self.current_speech, width=30)
+            speech_lines = wrapped_text.split('\n')
             
             # Calculate bubble dimensions
             line_height = font.get_linesize()
@@ -293,7 +226,7 @@ class NavalNPC(Entity):
             bubble_width = max_line_width + 20
             bubble_height = len(speech_lines) * line_height + 10
             
-            # Draw bubble background
+            # Draw bubble background with slight transparency
             bubble_rect = pygame.Rect(
                 bubble_center_x - bubble_width // 2,
                 bubble_center_y - bubble_height // 2,
@@ -301,8 +234,13 @@ class NavalNPC(Entity):
                 bubble_height
             )
             
-            pygame.draw.rect(screen, (255, 255, 255), bubble_rect)
-            pygame.draw.rect(screen, (0, 0, 0), bubble_rect, 2)
+            # Create a surface for the bubble with alpha
+            bubble_surface = pygame.Surface((bubble_width, bubble_height))
+            bubble_surface.set_alpha(240)  # Slight transparency
+            bubble_surface.fill((255, 255, 200))  # Light yellow background
+            screen.blit(bubble_surface, bubble_rect.topleft)
+            
+            pygame.draw.rect(screen, (100, 100, 100), bubble_rect, 2)  # Gray border
             
             # Draw speech text
             current_y = bubble_rect.top + 5

@@ -15,6 +15,7 @@ import wizardHouse # Ensure wizardHouse is imported to be available for MapManag
 import random
 from minigameManager import MinigameManager
 from quizManager import QuizManager
+from mysterious_rect import MysteriousRect
 
 
 try:
@@ -181,10 +182,16 @@ naval_npc_x = random.randint(600, 1000)
 naval_npc_y = random.randint(500, 850)
 naval_npc = NavalNPC(naval_npc_x, naval_npc_y, interaction_radius=40)
 
+# Create Mysterious Rectangle in top-right corner of map
+mysterious_rect_x = map_width - 250  # 100 pixels from right edge
+mysterious_rect_y = 200  # 50 pixels from top edge
+mysterious_rect = MysteriousRect(mysterious_rect_x, mysterious_rect_y, width=60, height=60, interaction_radius=50)
+
 # Initialize Interaction Manager
 interaction_manager = InteractionManager()
 interaction_manager.add_interactable(wizard)
 interaction_manager.add_interactable(naval_npc)
+interaction_manager.add_interactable(mysterious_rect)
 # Add other NPCs to interaction_manager here as they are created
 
 # Sprite group
@@ -315,7 +322,7 @@ while running:
                     elif eligible_interactable.id == "wizard_house_stay_query_circle":
                         print(f"E pressed. Starting conversation with Wizard.")
                         # Start conversation with the wizard
-                        interaction_manager.set_interacted_flag(eligible_interactable.id, True) 
+                        interaction_manager.set_interacted_flag(eligible_interactable.id, True)
                         show_interaction_popup = False
                         player_can_move = False  # Disable player movement during chat
                         typing_active = False
@@ -323,9 +330,15 @@ while running:
                     
                     elif eligible_interactable.id.startswith("naval_npc"):
                         print(f"E pressed. Talking to Naval Officer.")
-                        # Request new AI response from the Naval NPC
-                        naval_npc.request_new_response()
-                        # Popup remains active, typing will be triggered by naval_npc.new_message_to_type
+                        # Naval NPC now only shows "Hi" message
+                        naval_npc.interaction_message = "Hi"
+                        naval_npc.new_message_to_type = True
+                    
+                    elif eligible_interactable.id.startswith("mysterious_rect"):
+                        print(f"E pressed. Interacting with Mysterious Rectangle.")
+                        # Request new AI response from the Mysterious Rectangle
+                        mysterious_rect.request_new_response()
+                        # Popup remains active, typing will be triggered by mysterious_rect.new_message_to_type
                 elif event.key == pygame.K_q: 
                     print(f"Q pressed with eligible interactable: {eligible_interactable.id if eligible_interactable else 'None'}.")
                     if eligible_interactable:
@@ -365,13 +378,21 @@ while running:
                             typing_active = False # Stop typing
                             # Potentially reset wizard_in_house state if it has one
                             # wizard_in_house.reset_interaction_state() # If applicable
-                        
                         elif eligible_interactable.id.startswith("naval_npc"):
                             print(f"Q pressed. Moving on from Naval Officer.")
                             interaction_manager.set_interacted_flag(eligible_interactable.id, True)
                             show_interaction_popup = False
                             player_can_move = True
-                            typing_active = False # Stop typing                            naval_npc.reset_interaction_state() # Reset naval NPC's state
+                            typing_active = False # Stop typing
+                            naval_npc.reset_interaction_state() # Reset naval NPC's state
+                        
+                        elif eligible_interactable.id.startswith("mysterious_rect"):
+                            print(f"Q pressed. Moving on from Mysterious Rectangle.")
+                            interaction_manager.set_interacted_flag(eligible_interactable.id, True)
+                            show_interaction_popup = False
+                            player_can_move = True
+                            typing_active = False # Stop typing
+                            mysterious_rect.reset_interaction_state() # Reset mysterious rectangle's state
     
     # Handle chat state changes - restore player movement when chat ends
     if not wizard_chat_manager.is_active and not player_can_move and not show_interaction_popup:
@@ -426,16 +447,15 @@ while running:
             if not show_interaction_popup: 
                 show_interaction_popup = True
                 player_can_move = False 
-                print(f"Player entered {eligible_interactable.id}'s interaction circle. Popup shown.")
-            # Check if we need to start typing a new message immediately
+                print(f"Player entered {eligible_interactable.id}'s interaction circle. Popup shown.")            # Check if we need to start typing a new message immediately
             if eligible_interactable.id == "wizard" and wizard.new_message_to_type:
-                    props = wizard.get_interaction_properties() # Get current message
-                    text_to_type_full = props['message']
-                    typed_text_display = "" # Start with one char to avoid empty split issues if first char is newline
-                    typing_char_index = 0
-                    typing_last_char_time = current_time_ticks 
-                    typing_active = True
-                    wizard.new_message_to_type = False # Consume the flag
+                props = wizard.get_interaction_properties() # Get current message
+                text_to_type_full = props['message']
+                typed_text_display = "" # Start with one char to avoid empty split issues if first char is newline
+                typing_char_index = 0
+                typing_last_char_time = current_time_ticks 
+                typing_active = True
+                wizard.new_message_to_type = False # Consume the flag
             elif eligible_interactable.id.startswith("naval_npc") and naval_npc.new_message_to_type:
                 props = naval_npc.get_interaction_properties() # Get current message
                 text_to_type_full = props['message']
@@ -444,6 +464,14 @@ while running:
                 typing_last_char_time = current_time_ticks 
                 typing_active = True
                 naval_npc.new_message_to_type = False # Consume the flag
+            elif eligible_interactable.id.startswith("mysterious_rect") and mysterious_rect.new_message_to_type:
+                props = mysterious_rect.get_interaction_properties() # Get current message
+                text_to_type_full = props['message']
+                typed_text_display = ""
+                typing_char_index = 0
+                typing_last_char_time = current_time_ticks 
+                typing_active = True
+                mysterious_rect.new_message_to_type = False # Consume the flag
 
     elif show_interaction_popup: # No eligible interactable, but popup is shown
         show_interaction_popup = False
@@ -468,8 +496,7 @@ while running:
             typing_char_index = 0
             typing_last_char_time = current_time_ticks
             typing_active = True
-            wizard.new_message_to_type = False
-      # Check if naval_npc has a new message to type (e.g., after thinking) - only if not in minigame or quiz
+            wizard.new_message_to_type = False      # Check if naval_npc has a new message to type (e.g., after thinking) - only if not in minigame or quiz
     if show_interaction_popup and eligible_interactable and eligible_interactable.id.startswith("naval_npc") and not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements():
         if naval_npc.new_message_to_type and not typing_active: # Start typing if new message and not already typing
             props = naval_npc.get_interaction_properties()
@@ -479,6 +506,16 @@ while running:
             typing_last_char_time = current_time_ticks
             typing_active = True
             naval_npc.new_message_to_type = False
+      # Check if mysterious_rect has a new message to type (e.g., after thinking) - only if not in minigame or quiz
+    if show_interaction_popup and eligible_interactable and eligible_interactable.id.startswith("mysterious_rect") and not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements():
+        if mysterious_rect.new_message_to_type and not typing_active: # Start typing if new message and not already typing
+            props = mysterious_rect.get_interaction_properties()
+            text_to_type_full = props['message']
+            typed_text_display = ""
+            typing_char_index = 0
+            typing_last_char_time = current_time_ticks
+            typing_active = True
+            mysterious_rect.new_message_to_type = False
 
     game_camera.update(player, map_width, map_height)
       # Update sprites - only update NPCs if not in minigame
@@ -537,10 +574,13 @@ while running:
             map_manager.current_map_name == "wizard_house"):
             continue
 
-        screen.blit(sprite.image, game_camera.apply(sprite))
-      # Draw NavalNPC speech bubbles - only if not in minigame
+        screen.blit(sprite.image, game_camera.apply(sprite))      # Draw NavalNPC speech bubbles - only if not in minigame
     if map_manager.current_map_name != "wizard_house" and not minigame_manager.should_disable_main_game_elements():
         naval_npc.draw_speech_bubble(screen, game_camera)
+
+    # Draw Mysterious Rectangle - only if not in minigame and on main map
+    if map_manager.current_map_name == "main_map" and not minigame_manager.should_disable_main_game_elements():
+        mysterious_rect.draw(screen, game_camera, player.rect.center)
 
     # Draw interaction circles - only if not in minigame
     if not minigame_manager.should_disable_main_game_elements():
@@ -548,26 +588,36 @@ while running:
             if not interaction_manager.get_interacted_flag(interactable_obj.id):
                 props = interactable_obj.get_interaction_properties()
 
-            if props['id'].startswith("naval_npc"):
+            # Skip both naval_npc AND mysterious_rect
+            if props['id'].startswith("naval_npc") or props['id'].startswith("mysterious_rect"):
                 continue
 
+            # Draw circles only for other interactables (like wizard)
             circle_center_vec = pygame.math.Vector2(props['center'])
-            # Apply camera offset to the circle's static world position for drawing
             circle_draw_center_x_on_screen = circle_center_vec.x + game_camera.camera.x
             circle_draw_center_y_on_screen = circle_center_vec.y + game_camera.camera.y
             pygame.draw.circle(screen, props['color'],
-                               (int(circle_draw_center_x_on_screen), int(circle_draw_center_y_on_screen)),
-                               props['radius'], props['thickness'])    # Draw interaction popup if active - only if not in minigame
+                            (int(circle_draw_center_x_on_screen), int(circle_draw_center_y_on_screen)),
+                            props['radius'], props['thickness'])   
+             
     if show_interaction_popup and eligible_interactable and not minigame_manager.should_disable_main_game_elements():
         current_message_for_popup = ""
         if typing_active:
-            current_message_for_popup = typed_text_display
-        else:
-            # For non-wizard interactables or if wizard is not typing
+            # Check if interactable needs custom typing
             props = eligible_interactable.get_interaction_properties()
-            current_message_for_popup = props['message']
+            if props.get("needs_custom_typing") and hasattr(eligible_interactable, 'get_typing_message'):
+                current_message_for_popup = eligible_interactable.get_typing_message(len(typed_text_display), screen_width)
+            else:
+                current_message_for_popup = typed_text_display
+        else:
+            # For non-typing display
+            props = eligible_interactable.get_interaction_properties()
+            if props.get("needs_custom_display") and hasattr(eligible_interactable, 'get_display_message'):
+                current_message_for_popup = eligible_interactable.get_display_message(screen_width)
+            else:
+                current_message_for_popup = props['message']
         
-        popup_text_lines = current_message_for_popup.split('\n') # Split the message by newline character
+        popup_text_lines = current_message_for_popup.split('\n')
         
         # Calculate total height and max width for the background
         line_height = interaction_font.get_linesize()
@@ -633,6 +683,7 @@ while running:
                 text_rect = text_surface.get_rect(centerx=second_popup_bg_rect.centerx, top=current_y_second)
                 screen.blit(text_surface, text_rect)
                 current_y_second += line_height        # --- END: Draw second popup ---    # Draw chat interface if active - only if not in minigame
+    
     if not minigame_manager.should_disable_main_game_elements():
         wizard_chat_manager.draw(screen)
     
