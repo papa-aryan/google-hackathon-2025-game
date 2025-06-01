@@ -68,8 +68,8 @@ class QuizManager:
             genai.configure(api_key=google_api_key)
             
             model = genai.GenerativeModel(
-                model_name='gemini-1.5-flash',
-                system_instruction="You are an AI teacher evaluating student answers. You should be helpful but fair in your evaluation. Keep responses concise and educational."
+                model_name='gemini-2.0-flash-lite',
+                system_instruction="You are an AI teacher evaluating student answers. You should be helpful but fair in your evaluation. Use your knowledge to make sure the response makes sense and is logical in its context. Keep responses concise and educational."
             )
             
             self.chat_session = model.start_chat(history=[])

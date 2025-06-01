@@ -25,8 +25,8 @@ class WizardChatManager:
         
         # Font setup
         pygame.font.init()
-        self.font = pygame.font.Font(None, 28)
-        self.input_font = pygame.font.Font(None, 32)
+        self.font = pygame.font.Font(None, 36)
+        self.input_font = pygame.font.Font(None, 40)
         
         # Layout dimensions
         self.chat_width = screen_width - 100
@@ -56,8 +56,8 @@ class WizardChatManager:
             
             model = genai.GenerativeModel(
                 #model_name='gemini-1.5-flash',
-                model_name='gemma-3-27b-it',
-                system_instruction="You are a wise and ancient wizard with deep knowledge of magic, philosophy, and the mysteries of the universe. You are specifically interested in AI and the future. Keep your responses engaging but not too long. You are speaking to a visitor in your house who has come to seek wisdom and conversation."
+                model_name='gemini-2.0-flash-lite',
+                system_instruction="You are a wise and ancient wizard with deep knowledge of magic, philosophy, and the mysteries of the universe. You are specifically interested in AI and the future. Keep your responses engaging and short. You are speaking to a visitor in your house who has come to seek wisdom and conversation. Keep your answers simple and easy to understand. Nothing vague or cliché!"
             )
             
             self.chat_session = model.start_chat(history=[])
@@ -113,7 +113,7 @@ class WizardChatManager:
                 return True
             else:
                 # Add character to input
-                if len(self.current_input) < 200 and event.unicode.isprintable():
+                if len(self.current_input) < 300 and event.unicode.isprintable():
                     self.current_input += event.unicode
                 return True
         
@@ -122,12 +122,13 @@ class WizardChatManager:
     def _send_message(self, message):
         """Send a message to the wizard and get response"""
         # Add player message to history
-        self.conversation_history.append(("You:", message))
+        self.conversation_history.append(("You", message)) 
         
         # Send to API and get response
         try:
             response = self.chat_session.send_message(message)
             wizard_response = response.text
+            print(f"Wizard response: {repr(wizard_response)}") 
             self.conversation_history.append(("Wizard", wizard_response))
             
             # Auto-scroll to bottom
@@ -194,8 +195,9 @@ class WizardChatManager:
         wrapped_lines = self._get_wrapped_history()
         visible_lines = self._get_visible_lines()
         
-        y_offset = 10
+        y_offset = 25  # Changed from 10 to 25 for more top padding
         line_height = self.font.get_height() + 2
+        left_margin = 15  # Changed from 10 to 15 for more left padding
         
         # Determine which lines to show based on scroll
         start_line = self.scroll_offset
@@ -204,16 +206,23 @@ class WizardChatManager:
         for i in range(start_line, end_line):
             line = wrapped_lines[i]
             if line.strip():  # Don't render empty lines
-                # Determine color based on speaker
+                # Split speaker from message for separate coloring
                 if line.startswith("You:"):
-                    color = self.player_text_color
+                    speaker_surface = self.font.render("You:", True, self.player_text_color)
+                    message_text = line[4:]  # Remove "You:"
+                    message_surface = self.font.render(message_text, True, self.text_color)
+                    surface.blit(speaker_surface, (left_margin, y_offset))
+                    surface.blit(message_surface, (left_margin + speaker_surface.get_width(), y_offset))
                 elif line.startswith("Wizard:"):
-                    color = self.wizard_text_color
+                    speaker_surface = self.font.render("Wizard:", True, self.wizard_text_color)
+                    message_text = line[7:]  # Remove "Wizard:"
+                    message_surface = self.font.render(message_text, True, self.text_color)
+                    surface.blit(speaker_surface, (left_margin, y_offset))
+                    surface.blit(message_surface, (left_margin + speaker_surface.get_width(), y_offset))
                 else:
-                    color = self.text_color
-                
-                text_surface = self.font.render(line, True, color)
-                surface.blit(text_surface, (10, y_offset))
+                    # Continuation lines (no speaker prefix)
+                    text_surface = self.font.render(line, True, self.text_color)
+                    surface.blit(text_surface, (left_margin, y_offset))
             
             y_offset += line_height
     
@@ -225,8 +234,8 @@ class WizardChatManager:
         
         # Draw input text
         display_text = self.current_input
-        if len(display_text) > 60:  # Limit visible characters
-            display_text = "..." + display_text[-57:]
+        if len(display_text) > 120:  # Changed from 60 to 120
+            display_text = "..." + display_text[-117:]  # Adjusted accordingly
         
         # Add cursor
         cursor = "|" if pygame.time.get_ticks() % 1000 < 500 else " "

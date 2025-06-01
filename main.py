@@ -483,12 +483,14 @@ while running:
     game_camera.update(player, map_width, map_height)
       # Update sprites - only update NPCs if not in minigame
     if not minigame_manager.should_disable_main_game_elements():
-        # Set update parameters for NavalNPC before calling all_sprites.update()
-        naval_npc.set_update_parameters(map_width, map_height, map_manager.can_move, player)
-        
-        # Update all sprites (including the wizard's own update logic)
-        # Sprites list is managed by map_manager for map-specific NPCs
-        all_sprites.update()
+        if map_manager.current_map_name == "main_map":
+            # Main map: update both player and NPCs
+            naval_npc.set_update_parameters(map_width, map_height, map_manager.can_move, player)
+            all_sprites.update()
+        else:
+            # Other maps (wizard house): only update player and map-specific entities
+            player.update()
+            # Update any map-specific NPCs here if they exist
     else:
         # During minigame, only update the player
         player.update()

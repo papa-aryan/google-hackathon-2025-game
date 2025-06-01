@@ -23,9 +23,11 @@ class MapManager:
             for interactable in self.current_map_specific_interactables:
                 interaction_mgr.remove_interactable(interactable.id)  # Assuming interactable has an 'id' attribute
             self.current_map_specific_interactables = []
+
             # Clear static entities from the previous map
-            self.static_entities.empty()
-            all_sprites_group.remove(self.static_entities.sprites())  # Remove from main drawing group
+            for entity in self.static_entities:
+                all_sprites_group.remove(entity)  # Remove each entity from main drawing group
+            self.static_entities.empty()  # Then clear the static entities group
 
             self.current_map_name = map_name
             self.current_map_data = self.maps[map_name]
