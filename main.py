@@ -77,6 +77,7 @@ def on_quiz_completion(points):
     old_points = player_points
     player_points += points
     print(f"DEBUG: Quiz completion callback - gained {points} points. {old_points} -> {player_points}")
+    auto_save_progress()
 
 def on_quiz_failure():
     """Callback when player fails quiz or cancels"""
@@ -88,16 +89,33 @@ quiz_manager.set_callbacks(on_quiz_completion, on_quiz_failure)
 # Set up points callback for settings manager
 def update_player_points(new_points):
     global player_points
+    old_points = player_points
     player_points = new_points
     print(f"Player points updated to: {player_points}")
+    # Auto-save progress only if points actually changed
+    if old_points != new_points:
+        auto_save_progress()
 
-settings_manager.set_points_callback(update_player_points)
+def auto_save_progress():
+    """Automatically save game progress if user is signed in and auto-save is enabled"""
+    if settings_manager.is_signed_in and settings_manager.auto_save_enabled:
+        success = settings_manager.save_user_points(player_points)
+        if success:
+            print(f"Auto-saved: {player_points} points")
+        else:
+            print("Auto-save failed")
+    elif not settings_manager.is_signed_in:
+        print("Auto-save skipped: user not signed in")
+    else:
+        print("Auto-save skipped: auto-save disabled")
 
 def on_minigame_completion(points):
     """Callback when player completes minigame"""
     global player_points
     player_points += points
     print(f"Minigame completed! Gained {points} points. Total: {player_points}")
+    # Auto-save progress
+    auto_save_progress()
     # Return to main map
     map_manager.return_from_minigame(player, wizard, all_sprites, interaction_manager, update_map_dimensions_from_manager)
 
@@ -106,6 +124,8 @@ def on_minigame_death():
     global player_points
     player_points = max(0, player_points - 1)  # Don't go below 0
     print(f"Died in minigame! Lost 1 point. Total: {player_points}")
+    # Auto-save progress
+    auto_save_progress()
     # Return to main map
     map_manager.return_from_minigame(player, wizard, all_sprites, interaction_manager, update_map_dimensions_from_manager)
 
@@ -118,9 +138,10 @@ def on_naval_point_deduction(points_to_deduct):
     global player_points
     player_points = max(0, player_points - points_to_deduct)
     print(f"Naval wisdom acquired! {points_to_deduct} points deducted. Total: {player_points}")
+    # Auto-save progress
+    auto_save_progress()
 
-# Define map dimensions (larger than the screen)
-# Use tilemap dimensions
+
 # Make map_width and map_height global so they can be updated
 map_width = 0
 map_height = 0
@@ -443,7 +464,8 @@ while running:
                 else:                    # Normal collectible collection (40% chance)
                     player_points += 1
                     print(f"Item collected! Points: {player_points}")
-    
+                    auto_save_progress()
+                    
     # Update collectibles system (respawn timers) - only if not in minigame or quiz
     if map_manager.current_map_data["name"] == "main_map" and not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements():
         tilemap.update_collectibles()

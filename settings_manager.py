@@ -69,7 +69,6 @@ class SettingsManager:
         self.save_status_box_size = 45
         self.save_status_hover_font = pygame.font.Font(None, 28)
 
-        
         # Error message display properties
         self.error_message = None
         self.error_message_start_time = 0
@@ -77,6 +76,8 @@ class SettingsManager:
         self.error_font = pygame.font.Font(None, 24)
         self.error_bg_color = (80, 40, 40, 200)  # Faint red with transparency
         self.error_text_color = (255, 255, 255)
+
+        self.auto_save_enabled = True  # Default to enabled
         
         # Initialize database handler
         try:
