@@ -112,6 +112,13 @@ def on_minigame_death():
 # Set minigame callbacks
 minigame_manager.set_callbacks(on_minigame_completion, on_minigame_death)
 
+# Add callback function for naval NPC point deduction
+def on_naval_point_deduction(points_to_deduct):
+    """Callback when naval NPC deducts points for wisdom"""
+    global player_points
+    player_points = max(0, player_points - points_to_deduct)
+    print(f"Naval wisdom acquired! {points_to_deduct} points deducted. Total: {player_points}")
+
 # Define map dimensions (larger than the screen)
 # Use tilemap dimensions
 # Make map_width and map_height global so they can be updated
@@ -181,6 +188,9 @@ wizard = Wizard(wizard_x, wizard_y, interaction_radius=30, interaction_offset_y=
 naval_npc_x = random.randint(600, 1000)
 naval_npc_y = random.randint(500, 850)
 naval_npc = NavalNPC(naval_npc_x, naval_npc_y, interaction_radius=40)
+# Set naval NPC callback (add this after naval_npc creation)
+naval_npc.set_point_deduction_callback(on_naval_point_deduction)
+
 
 # Create Mysterious Rectangle in top-right corner of map
 mysterious_rect_x = map_width - 250  # 100 pixels from right edge
@@ -333,10 +343,13 @@ while running:
                         print(f"E pressed. Talking to Naval.")
                         if naval_npc.check_points_and_interact(player_points):
                             # Player has enough points - normal interaction will proceed
+                            player_can_move = True
                             pass
                         else:
                             # Player doesn't have enough points - show popup
                             naval_npc.show_insufficient_points_message()
+                            player_can_move = True
+
                     
                     elif eligible_interactable.id.startswith("mysterious_rect"):
                         print(f"E pressed. Interacting with Mysterious Rectangle.")
@@ -593,6 +606,7 @@ while running:
         
         # Draw naval NPC insufficient points popup - only if not in minigame
         naval_npc.draw_insufficient_points_popup(screen)
+        naval_npc.draw_quote_popup(screen) 
         
         for interactable_obj in interaction_manager.get_all_interactables():
             if not interaction_manager.get_interacted_flag(interactable_obj.id):

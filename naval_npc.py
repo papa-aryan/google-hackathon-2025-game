@@ -2,6 +2,8 @@ import pygame
 import random
 import textwrap
 from entity import Entity
+from databaseHandler import DatabaseHandler
+
 
 class NavalNPC(Entity):
     def __init__(self, x, y, interaction_radius=50):
@@ -51,6 +53,22 @@ class NavalNPC(Entity):
         self.popup_start_time = 0
         self.popup_duration = 4000  # 4 seconds in milliseconds
         self.popup_message = "Come back when you have at least 5 points bro..."
+
+        # Quote popup system
+        self.show_quote_popup = False
+        self.quote_popup_start_time = 0
+        self.quote_popup_duration = 6000  # 6 seconds in milliseconds
+        self.current_quote = ""
+        
+        # Initialize database handler
+        try:
+            self.db_handler = DatabaseHandler()
+        except Exception as e:
+            print(f"Failed to initialize database handler for naval NPC: {e}")
+            self.db_handler = None
+        
+        # Point deduction callback
+        self.point_deduction_callback = None
     
     def update(self):
         """Basic update method for pygame sprite system"""
@@ -199,14 +217,45 @@ class NavalNPC(Entity):
     def check_points_and_interact(self, player_points):
         """Check if player has enough points and set appropriate interaction state"""
         if player_points >= 5:
-            # TODO: Implement logic for when player has sufficient points
-            self.interaction_message = "Welcome! You have enough points."
-            self.new_message_to_type = True
+            # Player has enough points - fetch and show quote
+            self._fetch_and_show_quote()
             return True  # Sufficient points
         else:
             # Player doesn't have enough points - trigger error popup
             return False  # Insufficient points
 
+    def _fetch_and_show_quote(self):
+        """Fetch a random quote from database and show quote popup"""
+        if not self.db_handler:
+            print("Error: No database connection for naval NPC")
+            return
+            
+        try:
+            # Get random quote number (1-5)
+            quote_number = random.randint(1, 5)
+            
+            # Fetch quote from naval_quotes collection
+            quote_doc = self.db_handler.read_document("naval_quotes", str(quote_number))
+            
+            if quote_doc and "quote" in quote_doc:
+                self.current_quote = quote_doc["quote"]
+                self.show_quote_popup = True
+                self.quote_popup_start_time = pygame.time.get_ticks()
+                
+                # Deduct points through callback
+                if self.point_deduction_callback:
+                    self.point_deduction_callback(5)
+                    
+                print(f"Naval quote fetched: {self.current_quote[:50]}...")
+            else:
+                print(f"Error: Could not fetch quote {quote_number} from naval_quotes collection")
+                
+        except Exception as e:
+            print(f"Error fetching naval quote: {e}")
+
+    def set_point_deduction_callback(self, callback):
+        """Set callback function to deduct points from main game"""
+        self.point_deduction_callback = callback
 
     def get_interaction_properties(self):
         """Returns interaction properties for the interaction manager"""
@@ -270,11 +319,19 @@ class NavalNPC(Entity):
 
     def update_popup(self):
         """Update popup timer and visibility"""
+        current_time = pygame.time.get_ticks()
+        
+        # Update insufficient points popup
         if self.show_insufficient_points_popup:
-            current_time = pygame.time.get_ticks()
             if current_time - self.popup_start_time >= self.popup_duration:
                 self.show_insufficient_points_popup = False
-
+        
+        # Update quote popup
+        if self.show_quote_popup:
+            if current_time - self.quote_popup_start_time >= self.quote_popup_duration:
+                self.show_quote_popup = False
+                self.current_quote = ""
+                
     def show_insufficient_points_message(self):
         """Show the insufficient points popup"""
         self.show_insufficient_points_popup = True
@@ -313,3 +370,60 @@ class NavalNPC(Entity):
         text_x = bg_x + padding
         text_y = bg_y + padding
         screen.blit(text_surface, (text_x, text_y))
+
+    def draw_quote_popup(self, screen):
+        """Draw quote popup with fetched wisdom"""
+        if not self.show_quote_popup or not self.current_quote:
+            return
+            
+        # Create sleek popup for quote display
+        font = pygame.font.Font(None, 64)
+        
+        # Wrap text for better display
+        wrapped_text = textwrap.fill(self.current_quote, width=50)
+        quote_lines = wrapped_text.split('\n')
+        
+        # Calculate dimensions
+        line_height = font.get_linesize()
+        max_line_width = 0
+        rendered_lines = []
+        
+        for line in quote_lines:
+            text_surface = font.render(line, True, (255, 255, 255))
+            rendered_lines.append(text_surface)
+            if text_surface.get_width() > max_line_width:
+                max_line_width = text_surface.get_width()
+        
+        # Background dimensions with padding
+        padding = 80
+        bg_width = max_line_width + padding * 2
+        bg_height = len(quote_lines) * line_height + padding * 2
+        
+        # Center on screen
+        screen_width = screen.get_width()
+        screen_height = screen.get_height()
+        bg_x = (screen_width - bg_width) // 2
+        bg_y = (screen_height - bg_height) // 2  # Center vertically
+
+        # Draw elegant background
+        bg_surface = pygame.Surface((bg_width, bg_height))
+        bg_surface.fill((20, 30, 60))  # Dark blue background
+        screen.blit(bg_surface, (bg_x, bg_y))
+        
+        # Draw golden border
+        border_rect = pygame.Rect(bg_x - 3, bg_y - 3, bg_width + 6, bg_height + 6)
+        pygame.draw.rect(screen, (255, 215, 0), border_rect, 4)  # Gold border
+        
+        # Draw quote text
+        current_y = bg_y + padding
+        for text_surface in rendered_lines:
+            text_x = bg_x + (bg_width - text_surface.get_width()) // 2  # Center text
+            screen.blit(text_surface, (text_x, current_y))
+            current_y += line_height
+        
+        # Draw "Timeless Wisdom" header
+        header_font = pygame.font.Font(None, 40)
+        header_surface = header_font.render("~ Timeless Wisdom ~", True, (255, 215, 0))
+        header_x = bg_x + (bg_width - header_surface.get_width()) // 2
+        header_y = bg_y + 10
+        screen.blit(header_surface, (header_x, header_y))

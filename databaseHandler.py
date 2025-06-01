@@ -210,6 +210,8 @@ class DatabaseHandler:
         if self.firestore_handler:
             return self.firestore_handler.read_document(collection_name, document_id)
         return None
+    
+
 
 if __name__ == "__main__":
     try:
