@@ -9,8 +9,8 @@ class SettingsManager:
         self.is_signed_in = False  # Player state - will be implemented later
         
         # Button dimensions and positioning
-        self.button_width = 80
-        self.button_height = 40
+        self.button_width = 130
+        self.button_height = 65
         self.button_x = screen_width - self.button_width - 20  # 20px from right edge
         self.button_y = 20  # 20px from top
         self.button_rect = pygame.Rect(self.button_x, self.button_y, self.button_width, self.button_height)
@@ -24,7 +24,7 @@ class SettingsManager:
         
         # Colors - modern theme
         self.button_color = (40, 40, 50)
-        self.button_hover_color = (70, 70, 70)
+        self.button_hover_color = (75, 75, 70)
         self.button_text_color = (255, 255, 255)
         self.popup_bg_color = (30, 30, 40)
         self.popup_border_color = (100, 100, 120)
@@ -38,10 +38,10 @@ class SettingsManager:
         
         # Fonts
         pygame.font.init()
-        self.button_font = pygame.font.Font(None, 24)
-        self.popup_title_font = pygame.font.Font(None, 32)
-        self.popup_button_font = pygame.font.Font(None, 26)
-        self.input_font = pygame.font.Font(None, 24)
+        self.button_font = pygame.font.Font(None, 32)
+        self.popup_title_font = pygame.font.Font(None, 48)
+        self.popup_button_font = pygame.font.Font(None, 38)
+        self.input_font = pygame.font.Font(None, 26)
         
         # Mouse state
         self.mouse_pos = (0, 0)
@@ -284,7 +284,13 @@ class SettingsManager:
                 if button_rect.collidepoint(mouse_pos):
                     self._handle_action_button_click(i)
                     return True
-                    
+
+            # Catch clicks on our auto-save toggle
+            if getattr(self, 'auto_save_toggle_rect', None) and self.auto_save_toggle_rect.collidepoint(mouse_pos):
+                self.auto_save_enabled = not self.auto_save_enabled
+                print(f"Auto-save {'enabled' if self.auto_save_enabled else 'disabled'}")
+                return True
+
         return False
     
     def _handle_action_button_click(self, button_index):
@@ -347,11 +353,11 @@ class SettingsManager:
             
         # Adjust popup size based on whether input fields are showing
         if self.show_input_fields:
-            popup_height = 350
-            popup_width = 350
+            popup_height = 400
+            popup_width = 450
         else:
-            popup_height = 200
-            popup_width = 300
+            popup_height = 300
+            popup_width = 400
             
         popup_x = (self.screen_width - popup_width) // 2
         popup_y = (self.screen_height - popup_height) // 2
@@ -381,9 +387,24 @@ class SettingsManager:
         else:
             self._draw_action_buttons(screen, current_popup_rect)
             
+            toggle_text = f"Auto Save: {'On' if self.auto_save_enabled else 'Off'}"
+            # Render twice to pick hover vs normal color
+            normal_surf = self.popup_button_font.render(toggle_text, True, self.button_text_color)
+            hover_surf  = self.popup_button_font.render(toggle_text, True, self.action_button_hover_color)
+            # Position
+            toggle_rect = normal_surf.get_rect(
+                centerx=current_popup_rect.centerx,
+                y=current_popup_rect.bottom - 80
+            )
+            # Choose surf by hover state
+            surf = hover_surf if self._is_button_hovered(toggle_rect) else normal_surf
+            screen.blit(surf, toggle_rect)
+            self.auto_save_toggle_rect = toggle_rect
+
+
         # Draw close instruction
         close_text = "Click ESC or outside of the pop-up to close"
-        close_surface = pygame.font.Font(None, 20).render(close_text, True, (150, 150, 150))
+        close_surface = pygame.font.Font(None, 26).render(close_text, True, (150, 150, 150))
         close_rect = close_surface.get_rect(centerx=current_popup_rect.centerx, 
                                           y=current_popup_rect.bottom - 30)
         screen.blit(close_surface, close_rect)
@@ -480,40 +501,45 @@ class SettingsManager:
         """Draw the original action buttons (Sign In/Sign Up or Sign Out/Save)"""
         # Draw action buttons based on sign-in state
         self.action_button_rects = []  # Reset button rects
-        button_width = 120
-        button_height = 40
-        button_spacing = 20
-        
+        button_width = 140
+        button_height = 50
+        button_spacing = 30
+        button_y = popup_rect.centery - 10
+
+
         if self.is_signed_in:
-            button_texts = ["Sign Out", "Save"]
-            button_colors = [self.close_button_color, self.action_button_color]
-            button_hover_colors = [self.close_button_hover_color, self.action_button_hover_color]
+            texts = ["Sign Out","Save"]
+            colors = [self.close_button_color, self.action_button_color]
+            hovers = [self.close_button_hover_color, self.action_button_hover_color]
         else:
-            button_texts = ["Sign Up", "Sign In"]
-            button_colors = [self.action_button_color, self.action_button_color]
-            button_hover_colors = [self.action_button_hover_color, self.action_button_hover_color]
-        
-        # Calculate button positions
-        total_buttons_width = len(button_texts) * button_width + (len(button_texts) - 1) * button_spacing
-        start_x = popup_rect.centerx - total_buttons_width // 2
-        button_y = popup_rect.centery + 10
-        
-        for i, (text, color, hover_color) in enumerate(zip(button_texts, button_colors, button_hover_colors)):
-            button_x = start_x + i * (button_width + button_spacing)
-            button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
-            self.action_button_rects.append(button_rect)
-            
-            # Choose color based on hover state
-            current_color = hover_color if self._is_button_hovered(button_rect) else color
-            
-            # Draw button
-            pygame.draw.rect(screen, current_color, button_rect, border_radius=6)
-            pygame.draw.rect(screen, self.popup_border_color, button_rect, 2, border_radius=6)
-              # Draw button text
-            button_text_surface = self.popup_button_font.render(text, True, self.button_text_color)
-            text_rect = button_text_surface.get_rect(center=button_rect.center)
-            screen.blit(button_text_surface, text_rect)
-    
+            texts = ["Sign Up","Sign In"]
+            colors = [self.action_button_color]*2
+            hovers = [self.action_button_hover_color]*2
+
+        total_w = len(texts)*button_width + (len(texts)-1)*button_spacing
+        start_x = popup_rect.centerx - total_w//2
+
+        for i,(text,col,hov) in enumerate(zip(texts,colors,hovers)):
+            x = start_x + i*(button_width+button_spacing)
+            rect = pygame.Rect(x, button_y, button_width, button_height)
+            self.action_button_rects.append(rect)
+
+            # fill
+            current_col = hov if self._is_button_hovered(rect) else col
+            pygame.draw.rect(screen, current_col, rect, border_radius=8)
+
+            # custom border on Save
+            if text=="Save":
+                border_col = hov if self._is_button_hovered(rect) else self.popup_border_color
+                pygame.draw.rect(screen, border_col, rect, 3, border_radius=8)
+            else:
+                pygame.draw.rect(screen, self.popup_border_color, rect, 2, border_radius=8)
+
+            # text
+            txt_surf = self.popup_button_font.render(text, True, self.button_text_color)
+            txt_rect = txt_surf.get_rect(center=rect.center)
+            screen.blit(txt_surf, txt_rect)
+
     def draw(self, screen):
         """Draw both the settings button and popup if active"""
         # Update error message timer
