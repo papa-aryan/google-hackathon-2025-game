@@ -95,6 +95,7 @@ def update_player_points(new_points):
     # Auto-save progress only if points actually changed
     if old_points != new_points:
         auto_save_progress()
+settings_manager.set_points_callback(update_player_points)
 
 def auto_save_progress():
     """Automatically save game progress if user is signed in and auto-save is enabled"""

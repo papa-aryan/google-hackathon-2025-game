@@ -24,7 +24,7 @@ class SettingsManager:
         
         # Colors - modern theme
         self.button_color = (40, 40, 50)
-        self.button_hover_color = (75, 75, 70)
+        self.button_hover_color = (75, 70, 70)
         self.button_text_color = (255, 255, 255)
         self.popup_bg_color = (30, 30, 40)
         self.popup_border_color = (100, 100, 120)
