@@ -36,7 +36,7 @@ class QuoteTracker:
         
         # Fonts
         self.title_font = pygame.font.Font(None, 48)
-        self.quote_font = pygame.font.Font(None, 24)
+        self.quote_font = pygame.font.Font(None, 30)
         self.number_font = pygame.font.Font(None, 32)
         self.progress_font = pygame.font.Font(None, 36)
         
@@ -44,20 +44,23 @@ class QuoteTracker:
         self.popup_width = 900
         self.popup_height = 650
 
-        self.last_popup_time = 0
-        self.popup_cooldown_ms = 4000  # 4 second cooldown
+        # REMOVE THESE TWO?
+        #self.last_popup_time = 0
+        #self.popup_cooldown_ms = 4000  # 4 second cooldown
         
+        self.last_close_time = 0
+        self.reopen_cooldown_ms = 1000  # 1 second cooldown after closing
+
     def show_quote_tracker_popup(self, username):
         """Show quote tracker popup UI"""
         current_time = pygame.time.get_ticks()
         
-        # Check cooldown to prevent spam
-        if current_time - self.last_popup_time < self.popup_cooldown_ms:
+        # Check cooldown to prevent spam re-opening
+        if current_time - self.last_close_time < self.reopen_cooldown_ms:
             return  # Still in cooldown, ignore activation
             
         self.current_username = username
         self.is_popup_active = True
-        self.last_popup_time = current_time
         
         # Reset cache when popup opens to ensure fresh data
         if hasattr(self, '_cached_quote_status'):
@@ -90,12 +93,13 @@ class QuoteTracker:
             
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
+                # Close popup and start cooldown
                 self.is_popup_active = False
+                self.last_close_time = pygame.time.get_ticks()  # Start cooldown on close
                 return True  # Only consume ESC key events
                 
         # Don't consume other events - let them pass through to main game loop
-        return False  # Changed from True to False
-
+        return False
     
     def should_disable_main_game_elements(self):
         """Returns True if main game elements should be disabled during popup"""
