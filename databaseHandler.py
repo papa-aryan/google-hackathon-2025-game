@@ -205,7 +205,7 @@ class FirestoreHandler:
             if doc.exists:
                 user_data = doc.to_dict()
                 unlocked_quotes = user_data.get('unlocked_quotes', [])
-                print(f"User '{username}' has unlocked quotes: {unlocked_quotes}")
+                #print(f"User '{username}' has unlocked quotes: {unlocked_quotes}")
                 return unlocked_quotes
             else:
                 print(f"Username '{username}' not found.")

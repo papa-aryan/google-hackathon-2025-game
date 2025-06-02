@@ -203,7 +203,6 @@ def collect_item(world_x, world_y, tile_size):
     # Check for quote tracker tiles (961, 962)
     if (tile_y < len(BUILDING_MAP) and tile_x < len(BUILDING_MAP[tile_y]) and 
         BUILDING_MAP[tile_y][tile_x] in [961, 962]):
-        print(f"Quote tracker tile {BUILDING_MAP[tile_y][tile_x]} activated at ({tile_y}, {tile_x})")
         return "quote_tracker"  # Return quote tracker type
     
     return None  # No interaction

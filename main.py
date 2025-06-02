@@ -250,10 +250,16 @@ while running:
     current_time_ticks = pygame.time.get_ticks() # Get current time once per frame for typing
     
     for event in pygame.event.get():        # Handle chat events first - if chat is active, it should have priority
+        
         if not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements():
             if wizard_chat_manager.handle_event(event):
                 continue  # Skip other event processing if chat handled the event
         
+        # Handle quote tracker events
+        if not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements():
+            if quote_tracker.handle_event(event):
+                continue  # Skip other event processing if quote tracker handled the event
+
         # Handle quiz events
         if not minigame_manager.should_disable_main_game_elements():
             if quiz_manager.handle_event(event):
@@ -462,7 +468,7 @@ while running:
     # Update settings manager with current points
     settings_manager.set_current_points(player_points)
     
-    if player_can_move and not wizard_chat_manager.is_active and not settings_manager.show_input_fields and not quiz_manager.is_active:
+    if player_can_move and not wizard_chat_manager.is_active and not settings_manager.show_input_fields and not quiz_manager.is_active and not quote_tracker.should_disable_main_game_elements():
         player.update_position(keys, map_width, map_height, last_direction_keydown_event, map_manager.can_move)        # Check for item collection after player movement
         if map_manager.current_map_data["name"] == "main_map":  # Only on main map
             collection_result = tilemap.collect_item(player.rect.centerx, player.rect.centery+10, map_manager.get_current_tile_size())
@@ -481,12 +487,9 @@ while running:
                     print(f"Item collected! Points: {player_points}")
                     auto_save_progress()
             elif collection_result == "quote_tracker":
-                # Trigger quote tracker
-                if settings_manager.is_signed_in:
-                    current_username = settings_manager.get_current_username()
-                    quote_tracker.show_quote_tracker_popup(current_username)
-                else:
-                    print("QuoteTracker: Must be signed in to view quote tracker")
+                # Trigger quote tracker (cooldown handled internally)
+                current_username = settings_manager.get_current_username() if settings_manager.is_signed_in else None
+                quote_tracker.show_quote_tracker_popup(current_username)
                     
     # Update collectibles system (respawn timers) - only if not in minigame or quiz
     if map_manager.current_map_data["name"] == "main_map" and not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements():
@@ -764,6 +767,10 @@ while running:
     if not minigame_manager.should_disable_main_game_elements():
         quiz_manager.draw(screen)
     
+    # Draw quote tracker interface - only if not in minigame
+    if not minigame_manager.should_disable_main_game_elements():
+        quote_tracker.draw(screen)
+
     # Draw point tracker
     draw_point_tracker(screen)
     
