@@ -256,6 +256,18 @@ class DatabaseHandler:
         if self.firestore_handler:
             return self.firestore_handler.read_document(collection_name, document_id)
         return None
+
+    def get_user_unlocked_quotes(self, username):
+        """Gets the unlocked quotes list for a specific user."""
+        if self.firestore_handler:
+            return self.firestore_handler.get_user_unlocked_quotes(username)
+        return []
+
+    def add_unlocked_quote(self, username, quote_id):
+        """Adds a quote ID to user's unlocked quotes list."""
+        if self.firestore_handler:
+            return self.firestore_handler.add_unlocked_quote(username, quote_id)
+        return False
     
 
 

@@ -16,6 +16,8 @@ import random
 from minigameManager import MinigameManager
 from quizManager import QuizManager
 from mysterious_rect import MysteriousRect
+from quoteTracker import QuoteTracker
+
 
 
 try:
@@ -67,6 +69,9 @@ settings_manager = SettingsManager(screen_width, screen_height)
 
 # Initialize MinigameManager
 minigame_manager = MinigameManager()
+
+# Initialize QuoteTracker
+quote_tracker = QuoteTracker()
 
 # Initialize QuizManager
 quiz_manager = QuizManager(screen_width, screen_height)
@@ -303,6 +308,14 @@ while running:
                 if minigame_manager.is_active:
                     minigame_manager.toggle_debug_mode()
                 player_points += 1  
+            
+            elif event.key == pygame.K_F2:  # F2 to test quote tracker (MVP)
+                if settings_manager.is_signed_in:
+                    current_username = settings_manager.get_current_username()
+                    quote_tracker.print_quote_status(current_username)
+                else:
+                    print("QuoteTracker: Must be signed in to view quotes")
+
 
             elif event.key == pygame.K_u: # Check for 'U' key press
                 print("'U' key pressed. Attempting to reload and refresh map data...")

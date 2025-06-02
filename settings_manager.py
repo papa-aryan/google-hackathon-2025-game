@@ -304,7 +304,11 @@ class SettingsManager:
                 print("Sign Out clicked")
                 self.is_signed_in = False  # Sign out the user
                 self.current_username = None  # Clear username
-                print("User signed out successfully")
+                # Reset points to 0 when signing out
+                if hasattr(self, '_points_callback'):
+                    self._points_callback(0)
+                    self._saved_points = 0  # Reset saved points as well
+                print("User signed out successfully - points reset to 0")
             elif button_index == 1:  # Save
                 print("Save clicked")
                 # Save current points to database
@@ -320,6 +324,7 @@ class SettingsManager:
                 self._show_input_fields("signup")
             elif button_index == 1:  # Sign In
                 self._show_input_fields("signin")
+
                 
     def _show_input_fields(self, mode):
         """Show input fields for signin or signup"""
