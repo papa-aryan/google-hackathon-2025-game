@@ -465,7 +465,8 @@ while running:
     if player_can_move and not wizard_chat_manager.is_active and not settings_manager.show_input_fields and not quiz_manager.is_active:
         player.update_position(keys, map_width, map_height, last_direction_keydown_event, map_manager.can_move)        # Check for item collection after player movement
         if map_manager.current_map_data["name"] == "main_map":  # Only on main map
-            if tilemap.collect_item(player.rect.centerx, player.rect.centery+10, map_manager.get_current_tile_size()):
+            collection_result = tilemap.collect_item(player.rect.centerx, player.rect.centery+10, map_manager.get_current_tile_size())
+            if collection_result == "collectible":
                 # Random chance to trigger minigame or quiz
                 rand_chance = random.random()
                 if rand_chance < 0.8:  # 80% chance for quiz
@@ -479,6 +480,13 @@ while running:
                     player_points += 1
                     print(f"Item collected! Points: {player_points}")
                     auto_save_progress()
+            elif collection_result == "quote_tracker":
+                # Trigger quote tracker
+                if settings_manager.is_signed_in:
+                    current_username = settings_manager.get_current_username()
+                    quote_tracker.show_quote_tracker_popup(current_username)
+                else:
+                    print("QuoteTracker: Must be signed in to view quote tracker")
                     
     # Update collectibles system (respawn timers) - only if not in minigame or quiz
     if map_manager.current_map_data["name"] == "main_map" and not minigame_manager.should_disable_main_game_elements() and not quiz_manager.should_disable_main_game_elements():

@@ -192,13 +192,21 @@ def collect_item(world_x, world_y, tile_size):
     tile_x = world_x // tile_size
     tile_y = world_y // tile_size
     
+    # Check for collectibles (coins)
     if (tile_y, tile_x) in collectibles and not collectibles[(tile_y, tile_x)]["collected"]:
         collectibles[(tile_y, tile_x)]["collected"] = True
         if tile_y < len(BUILDING_MAP) and tile_x < len(BUILDING_MAP[tile_y]):
             BUILDING_MAP[tile_y][tile_x] = EMPTY_TILE_ID  # Remove from map
         print(f"Item collected at tile ({tile_y}, {tile_x})")
-        return True  # Item collected
-    return False
+        return "collectible"  # Return type instead of True
+    
+    # Check for quote tracker tiles (961, 962)
+    if (tile_y < len(BUILDING_MAP) and tile_x < len(BUILDING_MAP[tile_y]) and 
+        BUILDING_MAP[tile_y][tile_x] in [961, 962]):
+        print(f"Quote tracker tile {BUILDING_MAP[tile_y][tile_x]} activated at ({tile_y}, {tile_x})")
+        return "quote_tracker"  # Return quote tracker type
+    
+    return None  # No interaction
 
 
 # Collision map (0 = walkable, 1 = wall)

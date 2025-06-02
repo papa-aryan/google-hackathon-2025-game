@@ -72,3 +72,14 @@ class QuoteTracker:
         except Exception as e:
             print(f"QuoteTracker get_quote_status error: {e}")
             return {"unlocked": [], "locked": self.total_quote_ids}
+
+    def show_quote_tracker_popup(self, username):
+        """Show quote tracker popup (for now, just console output - will be UI later)"""
+        if not username:
+            print("QuoteTracker: Must be signed in to view quote tracker")
+            return
+            
+        print("\n" + "="*50)
+        print("🏆 QUOTE TRACKER ACTIVATED 🏆")
+        print("="*50)
+        self.print_quote_status(username)
